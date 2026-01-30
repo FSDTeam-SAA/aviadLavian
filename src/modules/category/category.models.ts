@@ -1,17 +1,18 @@
 import mongoose, { Schema, Model } from "mongoose";
 import slugify from "slugify";
 import { ICategory } from "./category.interface";
+import CustomError from "../../helpers/CustomError";
 
 const categorySchema = new Schema<ICategory>(
   {
-    name: {
+    title: {
       type: String,
       required: true,
       trim: true,
     },
     description: {
       type: String,
-      required: true,
+      required: false,
       trim: true,
     },
     image: {
@@ -22,6 +23,12 @@ const categorySchema = new Schema<ICategory>(
         type: String,
       },
     },
+    subCategoriesId: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
+      },
+    ],
     status: {
       type: String,
       enum: ["active", "inactive"],
@@ -41,23 +48,33 @@ const categorySchema = new Schema<ICategory>(
   }
 );
 
-/// 🔹 Generate slug before save
-categorySchema.pre("save", function (next) {
-  if (!this.isModified("name")) return;
+// Generate slug before save
+categorySchema.pre("save", async function (next) {
+  if (!this.isModified("title")) return;
 
-  this.slug = slugify(this.name, {
+  const category = await CategoryModel.findOne({ title: this.title });
+  if (category) {
+    throw new CustomError(400, "Category already exist");
+  }
+
+  this.slug = slugify(this.title, {
     lower: true,
     strict: true,
     trim: true,
   });
 });
 
-/// 🔹 Generate slug on update
-categorySchema.pre("findOneAndUpdate", function () {
+// Generate slug on update
+categorySchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
 
-  if (update?.name) {
-    update.slug = slugify(update.name, {
+  const category = await CategoryModel.findOne({ title: update.title });
+  if (category) {
+    throw new CustomError(400, "Category already exist");
+  }
+
+  if (update?.title) {
+    update.slug = slugify(update.title, {
       lower: true,
       strict: true,
       trim: true,

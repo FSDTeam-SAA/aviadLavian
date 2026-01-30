@@ -1,11 +1,12 @@
 import express from "express";
-
-import { authGuard } from "../../middleware/auth.middleware";
-import { upload } from "../../middleware/multer.midleware";
+import { uploadSingle } from "../../middleware/multer.midleware";
+import { createCategory } from "./category.controller";
+import { validateRequest } from "../../middleware/validateRequest.middleware";
+import { createCategorySchema } from "./category.validation";
 
 const router = express.Router();
 
-// router.route("/register").post(registration);
+router.route("/create-category").post(uploadSingle("image"), validateRequest(createCategorySchema), createCategory);
 
 
 export default router;

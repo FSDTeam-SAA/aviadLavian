@@ -10,7 +10,9 @@ import { categoryService } from "./category.service";
 export const createCategory = asyncHandler(
   async (req: Request, res: Response) => {
     const data: ICreateCategory = req.body;
-    const category = await categoryService.createCategory(data);
+    const image = req?.file as Express.Multer.File | undefined;
+  
+    const category = await categoryService.createCategory(data, image);
     ApiResponse.sendSuccess(res, 200, "Category created", category);
   }
 );

@@ -1,11 +1,12 @@
 export interface ICategory {
     _id: string;
-    name: string;
+    title: string;
     description: string;
     image: {
         public_id: string;
         secure_url: string;
     };
+    subCategoriesId: string[];
     status: string;
     isDeleted: boolean;
     slug: string;
