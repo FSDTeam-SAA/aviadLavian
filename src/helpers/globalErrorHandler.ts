@@ -1,59 +1,66 @@
 import type { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
+import CustomError from "./CustomError";
 
-/**
- * Custom error interface (matches your CustomError structure)
- */
-interface AppError extends Error {
-  statusCode?: number;
-  status?: string;
-  isOperationalError?: boolean;
-  data?: unknown;
-}
-
-/**
- * Development error response
- */
-const developmentError = (error: AppError, res: Response): Response => {
-  return res.status(error.statusCode || 500).json({
+const developmentError = (error: CustomError, res: Response): Response => {
+  const stackLines = error.stack ? error.stack.split("\n") : [];
+  return res.status(error.statusCode).json({
     message: error.message,
+    success: false,
     status: error.status,
     statusCode: error.statusCode,
     isOperationalError: error.isOperationalError,
     data: error.data,
-    stack: error.stack,
+    stack: stackLines,
   });
 };
 
-/**
- * Production error response
- */
-const productionError = (error: AppError, res: Response): Response => {
+
+const productionError = (error: CustomError, res: Response): Response => {
   if (error.isOperationalError) {
-    return res.status(error.statusCode || 500).json({
+    return res.status(error.statusCode).json({
       success: false,
-      status: error.status,
       message: error.message,
+      status: error.status,
+      data: error.data || undefined,
     });
   }
 
   return res.status(500).json({
     success: false,
     message: "Internal Server Error",
+    status: "error",
   });
 };
 
-/**
- * Global error handler middleware
- */
 export const globalErrorHandler = (
-  error: AppError,
+  error: Error,
   req: Request,
   res: Response,
   next: NextFunction
 ): Response | void => {
-  if (process.env.NODE_ENV === "development" || true) {
-    return developmentError(error, res);
-  } else {
-    return productionError(error, res);
+  let err: CustomError = error instanceof CustomError
+    ? error
+    : new CustomError(500, error.message);
+
+  if (error.name === "ValidationError") {
+    const validationErrors = Object.values((error as mongoose.Error.ValidationError).errors).map((el: any) => ({
+      field: el.path,
+      message: el.message,
+      kind: el.kind,
+    }));
+    err = new CustomError(400, "Validation failed", validationErrors);
+  } else if ((error as any).code === 11000) {
+    const key = Object.keys((error as any).keyValue)[0];
+    const value = (error as any).keyValue[key as string];
+    err = new CustomError(400, `Duplicate field value: ${value}`, { field: key, value });
+  } else if (error.name === "CastError") {
+    const castError = error as mongoose.Error.CastError;
+    err = new CustomError(400, `Invalid ${castError.path}: ${castError.value}`, { field: castError.path, value: castError.value });
   }
+
+  if (process.env.NODE_ENV === "development") {
+    return developmentError(err, res);
+  }
+  return productionError(err, res);
 };
