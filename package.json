@@ -12,7 +12,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node ./dist/server.js",
-    "build-and-start": "npm run build && npm run start"
+    "build-and-start": "npm run build && npm run start",
+    "makemodule": "ts-node scripts/makeModule.ts"
   },
   "keywords": [],
   "author": "",
