@@ -1,12 +1,12 @@
 import express from "express";
 const router = express.Router();
 
-import category from "../modules/subject/subject.route";
-import subCategory from "../modules/subcategory/subcategory.routes";
+import subject from "../modules/subject/subject.route";
+import label from "../modules/label/label.routes";
 import { userRoute } from "../modules/usersAuth/user.route";
 
 router.use("/user", userRoute);
-router.use("/category", category);
-router.use("/subcategory", subCategory);
+router.use("/subject", subject);
+router.use("/label", label);
 
 export default router;

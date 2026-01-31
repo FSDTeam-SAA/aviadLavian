@@ -1,19 +1,19 @@
 import mongoose, { Schema } from "mongoose";
 import slugify from "slugify";
 import CustomError from "../../helpers/CustomError";
-import { ISubCategory } from "./subcategory.interface";
-import { CategoryModel } from "../subject/subject.models";
+import { ILabel } from "./label.interface";
+import { SubjectModel } from "../subject/subject.models";
 
 
 
-const subcategorySchema = new Schema<ISubCategory>({
+const labelSchema = new Schema<ILabel>({
   title: { type: String, required: true },
   description: { type: String },
   image: {
     public_id: { type: String },
     secure_url: { type: String },
   },
-  categoryId: { type: Schema.Types.ObjectId, ref: "Category", required: true },
+  subjectId: { type: Schema.Types.ObjectId, ref: "Subject", required: true },
   topicsId: [{ type: Schema.Types.ObjectId, ref: "Topic" }],
   status: { type: String, default: "active" },
   isDeleted: { type: Boolean, default: false },
@@ -21,10 +21,10 @@ const subcategorySchema = new Schema<ISubCategory>({
 }, { timestamps: true });
 
 // Generate slug before save
-subcategorySchema.pre("save", async function (next) {
+labelSchema.pre("save", async function (next) {
   if (!this.isModified("title")) return;
 
-  const category = await SubCategoryModel.findOne({ title: this.title });
+  const category = await LabelModel.findOne({ title: this.title });
   if (category) {
     throw new CustomError(400, "SubCategory already exist");
   }
@@ -37,9 +37,9 @@ subcategorySchema.pre("save", async function (next) {
 });
 
 // Generate slug on update
-subcategorySchema.pre("findOneAndUpdate", async function () {
+labelSchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
-  const category = await SubCategoryModel.findOne({ title: update.title });
+  const category = await LabelModel.findOne({ title: update.title });
   if (category) {
     throw new CustomError(400, "SubCategory already exist");
   }
@@ -52,22 +52,22 @@ subcategorySchema.pre("findOneAndUpdate", async function () {
   }
 });
 
-//pre middleware check categotyId exist or not
-subcategorySchema.pre("save", async function (next) {
-  const category = await CategoryModel.findById(this.categoryId);
-  if (!category) {
-    throw new CustomError(400, "Category not found");
+//pre middleware check subjectId exist or not in save
+labelSchema.pre("save", async function (next) {
+  const subject = await SubjectModel.findById(this.subjectId);
+  if (!subject) {
+    throw new CustomError(400, "Subject not found");
   }
 });
 
-//pre middleware check categotyId exist or not
-subcategorySchema.pre("findOneAndUpdate", async function () {
+//pre middleware check categotyId exist or not in update
+labelSchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
-  const category = await CategoryModel.findById(update.categoryId);
-  if (!category) {
-    throw new CustomError(400, "Category not found");
+  const subject = await SubjectModel.findById(update.subjectId);
+  if (!subject) {
+    throw new CustomError(400, "Subject not found");
   }
 });
 
 
-export const SubCategoryModel = mongoose.model<ISubCategory>("SubCategory", subcategorySchema);
+export const LabelModel = mongoose.model<ILabel>("Label", labelSchema);

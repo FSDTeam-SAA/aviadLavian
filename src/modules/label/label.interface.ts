@@ -1,11 +1,11 @@
 import { ObjectId } from "mongoose";
 
     
-    export interface ISubCategory {
+    export interface ILabel {
   _id: string;
   title: string;
   description: string;
-  categoryId: ObjectId;
+  subjectId: ObjectId;
   topicsId: string[];
   image?: {
     public_id: string;
@@ -18,7 +18,7 @@ import { ObjectId } from "mongoose";
   updatedAt?: Date;
 }
 
-export interface ICreateSubCategory {
+export interface ICreateLabel {
   title: string;
   description?: string;
   status?: string;

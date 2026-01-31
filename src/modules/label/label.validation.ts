@@ -3,7 +3,7 @@ import { z } from "zod";
 const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid ObjectId");
 
 
-export const createSubCategorySchema = z.object({
+export const createLabelSchema = z.object({
   title: z
     .string()
     .min(3, "Title must be at least 3 characters")
@@ -16,7 +16,7 @@ export const createSubCategorySchema = z.object({
     .optional()
     .transform(val => val?.trim()),
 
-  categoryId: objectId,
+  subjectId: objectId,
 
   topicsId: objectId.optional(),
   status: z
