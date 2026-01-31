@@ -28,6 +28,7 @@
     "@types/mongodb": "^4.0.6",
     "@types/mongoose": "^5.11.96",
     "@types/nodemailer": "^7.0.4",
+    "bcryptjs": "^3.0.3",
     "cloudinary": "^2.8.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",

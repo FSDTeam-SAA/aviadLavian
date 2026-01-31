@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../config";
 import CustomError from "../helpers/CustomError";
-import { userModel } from "../modules/auth/user.models";
+import { userModel } from "../modules/usersAuth/user.models";
 
 interface TokenPayload extends JwtPayload {
   userId: string;
@@ -12,20 +12,18 @@ interface AuthRequest extends Request {
     _id: string;
     email: string;
     role: string;
-    permissions?: string[];
   };
 }
 
 export const authGuard = async (
   req: AuthRequest,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const accessToken =
       req.cookies?.accessToken ||
       (req.headers.accesstoken as string | undefined);
-
 
     if (!accessToken) {
       throw new CustomError(401, "Unauthorized access!");
@@ -33,7 +31,7 @@ export const authGuard = async (
 
     const decoded = jwt.verify(
       accessToken,
-      config.jwt.accessTokenSecret
+      config.jwt.accessTokenSecret,
     ) as TokenPayload;
 
     if (!decoded || !decoded.userId) {
