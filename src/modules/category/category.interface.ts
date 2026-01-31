@@ -24,3 +24,14 @@ export interface ICreateCategory {
     };
     status?: string;
 }
+
+
+export interface IUpdateCategory {
+    title?: string;
+    description?: string;
+    image?: {
+        public_id: string;
+        secure_url: string;
+    };
+    status?: string;
+}
