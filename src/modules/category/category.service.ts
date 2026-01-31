@@ -75,7 +75,7 @@ const getAllCategories = async ({
 
 //get single category
 const getSingleCategory = async (categoryId: string) => {
-    const category = await CategoryModel.findById({ _id: categoryId, isDeleted: false, status: "active" }).populate("subCategoriesId");
+    const category = await CategoryModel.findOne({ _id: categoryId, isDeleted: false, status: "active" }).populate("subCategoriesId");
     if (!category) throw new CustomError(400, "Category not found");
     return category;
 }
@@ -102,10 +102,23 @@ const updateCategory = async (categoryId: string, data: IUpdateCategory, images:
     return category;
 }
 
+//delete category
+const deleteCategory = async (categoryId: string) => {
+    const category = await CategoryModel.findOneAndUpdate({ _id: categoryId, isDeleted: false }, { isDeleted: true }, { new: true });
+    if (!category) throw new CustomError(400, "Category not found");
+
+    //delete previous image
+    // if (category?.image?.public_id) {
+    //     await deleteCloudinary(category?.image?.public_id);
+    // }
+
+    return category;
+}
 
 export const categoryService = {
     createCategory,
     getAllCategories,
     getSingleCategory,
-    updateCategory
+    updateCategory,
+    deleteCategory
 };
