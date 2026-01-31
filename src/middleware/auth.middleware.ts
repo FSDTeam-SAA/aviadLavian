@@ -21,12 +21,10 @@ export const authGuard = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const accessToken =
-      req.cookies?.accessToken ||
-      (req.headers.accesstoken as string | undefined);
+    const accessToken = req.cookies?.accessToken || req.headers?.authorization?.split("Bearer ")[1];
 
     if (!accessToken) {
-      throw new CustomError(401, "Unauthorized access!");
+      throw new CustomError(401, "Access token not found!");
     }
 
     const decoded = jwt.verify(
@@ -40,9 +38,8 @@ export const authGuard = async (
 
     const user = await userModel
       .findById(decoded.userId)
-      .select("_id email role permissions accountStatus")
+      .select("_id email role")
       .lean();
-
     if (!user) {
       throw new CustomError(401, "User not found!");
     }
@@ -58,3 +55,22 @@ export const authGuard = async (
     next(error);
   }
 };
+
+//check role admin or user i want array of roles
+export const allowRole = (...roles: string[]) => {
+  return async (req: AuthRequest, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user?.role) {
+        throw new CustomError(403, "You are not authorized to access this route!");
+      }
+      if (!roles.includes(req.user.role)) {
+        throw new CustomError(403, "You are not authorized to access this route!");
+      }
+      next();
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+
