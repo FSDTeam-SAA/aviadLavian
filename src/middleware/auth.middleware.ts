@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../config";
 import CustomError from "../helpers/CustomError";
-import { userModel } from "../modules/users/user.models";
+import { userModel } from "../modules/usersAuth/user.models";
 
 interface TokenPayload extends JwtPayload {
   userId: string;

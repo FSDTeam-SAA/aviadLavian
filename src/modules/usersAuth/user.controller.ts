@@ -6,7 +6,7 @@ import ApiResponse from "../../utils/apiResponse";
 import {
   accountVerifyTemplate,
   forgotPasswordOtpTemplate,
-} from "../auth/auth.templates";
+} from "../../tempaletes/auth.templates";
 import { mailer } from "../../helpers/nodeMailer";
 import config from "../../config";
 import { userService } from "./user.service";

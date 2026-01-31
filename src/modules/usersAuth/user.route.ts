@@ -6,7 +6,11 @@ import {
   forgetPassword,
   resetPassword,
   generateAccessToken,
+  updateUser,
+  verifyEmail,
 } from "./user.controller";
+import { authGuard } from "../../middleware/auth.middleware";
+import { upload } from "../../middleware/multer.midleware";
 
 const router = Router();
 // auth
@@ -21,5 +25,15 @@ router.post("/reset-password", resetPassword);
 
 // token
 router.post("/refresh-token", generateAccessToken);
+
+router
+  .route("/update-user")
+  .patch(
+    authGuard,
+    upload.fields([{ name: "image", maxCount: 1 }]),
+    updateUser,
+  );
+
+router.route("/verify-email").post(authGuard, verifyEmail);
 
 export const userRoute = router;

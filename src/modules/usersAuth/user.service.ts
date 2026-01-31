@@ -12,12 +12,9 @@ export const userService = {
   async registerUser(payload: Partial<IUser>) {
     const verificationOtp = crypto.randomInt(100000, 999999);
     const { password } = payload;
-    const hashedPassword = await bcryptjs.hash(password as string, 10);
-    const user = await userModel.create({
-      ...payload,
-      password: hashedPassword,
-      verificationOtp,
-    });
+    // const hashedPassword = await bcryptjs.hash(password as string, 10);
+
+    const user = await userModel.create(payload);
 
     return user;
   },
