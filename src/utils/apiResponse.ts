@@ -4,13 +4,13 @@ class ApiResponse<T = unknown> {
   statusCode: number;
   status: string;
   meta?: any;
-  data: T | null;
+  data: T | string;
 
-  constructor(message: string, statusCode: number, data: T, meta?: any) {
+  constructor(message: string, statusCode: number, data?: T, meta?: any) {
     this.message = message;
     this.statusCode = statusCode;
     this.status = statusCode >= 200 && statusCode < 300 ? "ok" : "Error";
-    this.data = data;
+    this.data = data || "null";
     this.meta = meta;
   }
 
@@ -18,7 +18,7 @@ class ApiResponse<T = unknown> {
     res: Response,
     statusCode: number,
     message: string,
-    data: T ,
+    data?: T,
     meta?: any,
   ) {
     return res

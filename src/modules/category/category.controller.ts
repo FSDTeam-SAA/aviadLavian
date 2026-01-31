@@ -45,3 +45,13 @@ export const updateCategory = asyncHandler(
     ApiResponse.sendSuccess(res, 200, "Category updated", category);
   }
 )
+
+//delete category
+export const deleteCategory = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { categoryId } = req.params;
+    if (!categoryId) throw new CustomError(400, "Category id missing in params");
+    const category = await categoryService.deleteCategory(categoryId as string);
+    ApiResponse.sendSuccess(res, 200, "Category deleted", );
+  }
+)
