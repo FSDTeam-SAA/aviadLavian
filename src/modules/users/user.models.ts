@@ -3,8 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import CustomError from "../../helpers/CustomError";
 import config from "../../config";
-import { IUser } from "./user.interface";
-
+import { IUser, role, status } from "./user.interface";
 
 const userSchema = new Schema<IUser>(
   {
@@ -23,8 +22,23 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
+      enum: Object.values(role),
+      default: role.USER,
+    },
+    profession: {
+      type: String,
       required: true,
     },
+    country: {
+      type: String,
+      required: true,
+    },
+    addressIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Address",
+      },
+    ],
     profileImage: [
       {
         public_id: String,
@@ -34,17 +48,24 @@ const userSchema = new Schema<IUser>(
     ],
     status: {
       type: String,
-      required: true,
-      default: "active",
-      enum: ["active", "inactive", "blocked"],
+      enum: Object.values(status),
+      default: status.active,
     },
     isVerified: {
       type: Boolean,
       required: true,
       default: false,
     },
+    isDeleted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
     verificationOtp: {
       type: Number,
+    },
+    verificationOtpExpire: {
+      type: Date,
     },
     refreshToken: {
       type: String,
@@ -55,10 +76,21 @@ const userSchema = new Schema<IUser>(
     frogetPasswordOtpExpire: {
       type: Date,
     },
+    resetPassword: {
+      otp: {
+        type: Number,
+      },
+      token: {
+        type: String,
+      },
+      expireAt: {
+        type: Date,
+      },
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 //
@@ -83,7 +115,7 @@ userSchema.pre<IUser & Document>("save", async function () {
 
 // compare password
 userSchema.methods.comparePassword = async function (
-  password: string
+  password: string,
 ): Promise<boolean> {
   return await bcrypt.compare(password, this.password);
 };
@@ -95,7 +127,7 @@ userSchema.methods.createAccessToken = function () {
     config.jwt.accessTokenSecret as string,
     {
       expiresIn: config.jwt.accessTokenExpires as any,
-    }
+    },
   );
 };
 
@@ -106,7 +138,7 @@ userSchema.methods.createRefreshToken = function () {
     config.jwt.refreshTokenSecret as string,
     {
       expiresIn: config.jwt.refreshTokenExpires as any,
-    }
+    },
   );
 };
 
@@ -122,5 +154,5 @@ userSchema.methods.verifyRefreshToken = function (token: string) {
 
 export const userModel: Model<IUser> = mongoose.model<IUser>(
   "User",
-  userSchema
+  userSchema,
 );
