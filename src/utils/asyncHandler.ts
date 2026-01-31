@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import fs from "fs";
 
 type AsyncController = (
   req: Request,
@@ -11,6 +12,12 @@ export const asyncHandler = (fn: AsyncController) => {
     try {
       await fn(req, res, next);
     } catch (error) {
+
+      //if error then revove the image from local folder
+      if (req.file?.path) {
+        fs.unlinkSync(req.file.path);
+      }
+
       next(error);
     }
   };
