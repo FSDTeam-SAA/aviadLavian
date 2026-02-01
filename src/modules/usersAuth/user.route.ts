@@ -19,9 +19,11 @@ router.post("/register-user", registration);
 router.post("/login", login);
 router.post("/logout", logout);
 
-// password
+// // password
+// router.post("/forget-password", forgetPassword);
+// router.post("/reset-password", resetPassword);
 router.post("/forget-password", forgetPassword);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password/:token", resetPassword);
 
 // token
 router.post("/refresh-token", generateAccessToken);

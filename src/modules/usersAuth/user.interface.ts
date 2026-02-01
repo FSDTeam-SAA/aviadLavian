@@ -1,6 +1,6 @@
 export enum role {
-  ADMIN = "ADMIN",
-  USER = "USER",
+  ADMIN = "admin",
+  USER = "user",
 }
 
 export enum status {
@@ -24,6 +24,8 @@ export interface IUser extends Document {
   status: status;
   country: string;
   addressIds?: string[];
+  passwordResetToken: string;
+  passwordResetExpire: Date | null;
   isVerified: boolean;
   isDeleted: boolean;
   verificationOtp: number | null;

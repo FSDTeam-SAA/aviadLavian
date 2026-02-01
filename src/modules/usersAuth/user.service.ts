@@ -10,11 +10,14 @@ import bcryptjs from "bcryptjs";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
-    const verificationOtp = crypto.randomInt(100000, 999999);
-    const { password } = payload;
-    // const hashedPassword = await bcryptjs.hash(password as string, 10);
+    if (payload.role === "admin")
+      throw new CustomError(400, "Admin role is reserved");
 
-    const user = await userModel.create(payload);
+    const adminEmails = config.adminEmails;
+    console.log(adminEmails);
+    const role = adminEmails.includes(payload.email!) ? "admin" : "user";
+    // const role = "user";
+    const user = await userModel.create({ ...payload, role: role });
 
     return user;
   },
@@ -80,32 +83,46 @@ export const userService = {
 
   async forgetPassword(email: string) {
     const user = await userModel.findOne({ email });
-    if (!user) throw new CustomError(400, "Email not found");
+    if (!user) throw new CustomError(400, "User not found");
 
-    const otp = crypto.randomInt(100000, 999999);
-    user.forgetPasswordOtp = otp;
-    user.frogetPasswordOtpExpire = new Date(Date.now() + 10 * 60 * 1000);
+    // generate random token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    // hash token before saving
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken) 
+      .digest("hex");
+
+    user.passwordResetToken = hashedToken;
+    user.passwordResetExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await user.save({ validateBeforeSave: false });
+
+    return {
+      resetToken, // 👉 only send plain token via email
+      user,
+    };
+  },
+  async resetPassword(token: string, newPassword: string) {
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await userModel.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpire: { $gt: Date.now() },
+    });
+
+    if (!user) throw new CustomError(400, "Token invalid or expired");
+
+    user.password = newPassword;
+    user.passwordResetToken = "";
+    user.passwordResetExpire = null;
+    user.refreshToken = ""; // revoke all sessions
+
     await user.save();
 
-    return { user, otp };
+    return true;
   },
-
-  async resetPassword(email: string, otp: number, password: string) {
-    const user = await userModel.findOne({ email });
-    if (!user) throw new CustomError(400, "Email not found");
-
-    if (!user.forgetPasswordOtp) throw new CustomError(400, "Otp not found");
-    if ((user.frogetPasswordOtpExpire as any) < Date.now())
-      throw new CustomError(400, "Otp expired");
-    if (user.forgetPasswordOtp !== otp)
-      throw new CustomError(400, "Invalid otp");
-
-    user.password = password;
-    user.forgetPasswordOtp = null;
-    user.frogetPasswordOtpExpire = null;
-    await user.save();
-  },
-
   async generateAccessToken(refreshToken: string) {
     const decoded = jwt.verify(
       refreshToken,
