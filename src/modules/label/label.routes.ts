@@ -10,6 +10,6 @@ router.post("/create-label", uploadSingle("image"), validateRequest(createLabelS
 router.get("/get-label/:labelId", getSingleLabel);
 router.get("/get-all-label", getAllLabel);
 router.patch("/update-label/:labelId", uploadSingle("image"), validateRequest(updateLabelSchema),  updateLabel);
-router.patch("/delete-label/:labelId",  deleteLabel);
+router.delete("/delete-label/:labelId",  deleteLabel);
 
 export default router;

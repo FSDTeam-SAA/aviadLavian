@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { TopicModel } from "./topic.models";
 import { ICreateTopic } from "./topic.interface";
 import CustomError from "../../helpers/CustomError";
-import { uploadCloudinary } from "../../helpers/cloudinary";
+import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { LabelModel } from "../label/label.models";
 import { paginationHelper } from "../../utils/pagination";
 
@@ -101,7 +101,7 @@ const getAllTopic = async ({
   const topics = await TopicModel.find(filter)
     .skip(pagination.skip)
     .limit(pagination.limit).sort(sort);
-  if (!topics) {
+  if (topics.length === 0) {
     throw new CustomError(400, "Topics not found");
   }
 
@@ -122,23 +122,97 @@ const getAllTopic = async ({
 
 //get single topic
 const getTopicById = async (topicId: string) => {
-  const topic = await TopicModel.findById(topicId).populate({
-    path: "articlesId",
-    select: "name slug image _id status",
-    match: { status: "active" },
-  }).populate({
-    path: "quizsId",
-    select: "name slug image _id status",
-    match: { status: "active" },
-  }).populate({
-    path: "flashcardsId",
-    select: "name slug image _id status",
-    match: { status: "active" },
-  });
+  const topic = await TopicModel.findById(topicId)
+  // .populate({
+  //   path: "articlesId",
+  //   select: "name slug image _id status",
+  //   match: { status: "active" },
+  // }).populate({
+  //   path: "quizsId",
+  //   select: "name slug image _id status",
+  //   match: { status: "active" },
+  // }).populate({
+  //   path: "flashcardsId",
+  //   select: "name slug image _id status",
+  //   match: { status: "active" },
+  // });
 
   if (!topic) throw new CustomError(400, "Topic not found");
   return topic;
 }
 
+//update topic
+const updateTopic = async (topicId: string, data: any, image?: Express.Multer.File) => {
+  const topic = await TopicModel.findByIdAndUpdate(topicId, data, { new: true });
+  if (!topic) throw new CustomError(400, "Topic not found");
 
-export const topicService = { createTopic, getAllTopic, getTopicById };
+  //update image into cloudinary
+  if (image?.path) {
+    //delete image from cloudinary
+    if (topic.image?.public_id) {
+      await deleteCloudinary(topic?.image?.public_id);
+    }
+
+    const uploaded = await uploadCloudinary(image.path);
+    if (!uploaded) {
+      throw new CustomError(400, "Image upload failed");
+    }
+    topic.image = uploaded;
+    await topic.save();
+  }
+  return topic;
+}
+
+//delete topic
+const deleteTopic = async (topicId: string) => {
+
+  const topic = await TopicModel.findOneAndDelete({
+    _id: topicId,
+    $and: [
+      {
+        $or: [
+          { articlesId: { $exists: false } },
+          { articlesId: { $size: 0 } },
+        ],
+      },
+      {
+        $or: [
+          { quizsId: { $exists: false } },
+          { quizsId: { $size: 0 } },
+        ],
+      },
+      {
+        $or: [
+          { flashcardsId: { $exists: false } },
+          { flashcardsId: { $size: 0 } },
+        ],
+      },
+    ],
+  });
+
+  if (
+    (topic as any)?.articlesId?.length > 0 ||
+    (topic as any)?.quizsId?.length > 0 ||
+    (topic as any)?.flashcardsId?.length > 0
+  ) {
+    throw new CustomError(
+      400,
+      "Topic has associated content, cannot delete"
+    );
+  }
+
+  if (!topic) {
+    throw new CustomError(400, "Topic not found");
+  }
+
+  // delete image from Cloudinary
+  if (topic?.image?.public_id) {
+    await deleteCloudinary(topic.image.public_id);
+  }
+
+  return topic;
+};
+
+
+
+export const topicService = { createTopic, getAllTopic, getTopicById, updateTopic, deleteTopic };
