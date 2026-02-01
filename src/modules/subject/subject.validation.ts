@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createCategorySchema = z.object({
+export const createSubjectSchema = z.object({
     title: z
         .string()
         .min(3, "Title must be at least 3 characters")
@@ -16,7 +16,7 @@ export const createCategorySchema = z.object({
     status: z.string().optional()
 });
 
-export const updateCategorySchema = z.object({
+export const updateSubjectSchema = z.object({
     title: z
         .string()
         .min(3, "Title must be at least 3 characters")
