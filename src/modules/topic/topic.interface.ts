@@ -26,3 +26,10 @@ export interface ICreateTopic {
   labelId: mongoose.Types.ObjectId;
   status?: string;
 }
+
+
+export interface IUpdateTopic {
+  title?: string;
+  description?: string;
+  status?: string;
+}

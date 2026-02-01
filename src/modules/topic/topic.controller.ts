@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
-import { ICreateTopic } from "./topic.interface";
+import { ICreateTopic, IUpdateTopic, } from "./topic.interface";
 import { topicService } from "./topic.service";
 
 //create topic
@@ -24,4 +24,23 @@ export const getSingleTopic = asyncHandler(async (req: Request, res: Response) =
   if (!topicId) throw new Error("Topic id missing in params");
   const topic = await topicService.getTopicById(topicId as string);
   ApiResponse.sendSuccess(res, 200, "Topic fetched successfully", topic);
+});
+
+//update topic
+export const updateTopic = asyncHandler(async (req: Request, res: Response) => {
+  const { topicId } = req.params;
+  if (!topicId) throw new Error("Topic id missing in params");
+  const data: IUpdateTopic = req.body;
+  const image = req?.file as Express.Multer.File | undefined;
+  const topic = await topicService.updateTopic(topicId as string, data, image);
+  ApiResponse.sendSuccess(res, 200, "Topic updated successfully", topic);
+});
+
+
+//delete topic
+export const deleteTopic = asyncHandler(async (req: Request, res: Response) => {
+  const { topicId } = req.params;
+  if (!topicId) throw new Error("Topic id missing in params");
+  const topic = await topicService.deleteTopic(topicId as string);
+  ApiResponse.sendSuccess(res, 200, "Topic deleted successfully");
 });

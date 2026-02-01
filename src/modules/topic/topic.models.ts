@@ -10,9 +10,9 @@ const topicSchema = new Schema<ITopic>({
   description: { type: String },
   labelId: { type: mongoose.Schema.Types.ObjectId, ref: "Label" },
   subjectId: { type: mongoose.Schema.Types.ObjectId, ref: "Subject" },
-  articlesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Article" }],
-  quizsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Quiz" }],
-  flashcardsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Flashcard" }],
+  // articlesId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Article" }],
+  // quizsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Quiz" }],
+  // flashcardsId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Flashcard" }],
   image: {
     public_id: { type: String },
     secure_url: { type: String },
