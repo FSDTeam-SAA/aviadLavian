@@ -23,3 +23,9 @@ export interface ICreateLabel {
   description?: string;
   status?: string;
 }
+
+export interface IUpdateLabel {
+  title?: string;
+  description?: string;
+  status?: string;
+}

@@ -17,19 +17,11 @@ const developmentError = (error: CustomError, res: Response): Response => {
 
 
 const productionError = (error: CustomError, res: Response): Response => {
-  if (error.isOperationalError) {
-    return res.status(error.statusCode).json({
-      success: false,
-      message: error.message,
-      status: error.status,
-      data: error.data || undefined,
-    });
-  }
-
-  return res.status(500).json({
+  return res.status(error.statusCode).json({
+    message: error.message,
     success: false,
-    message: "Internal Server Error",
-    status: "error",
+    status: error.status,
+    statusCode: error.statusCode,
   });
 };
 
