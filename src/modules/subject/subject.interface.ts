@@ -1,4 +1,4 @@
-export interface ICategory {
+export interface ISubject {
     _id: string;
     title: string;
     description: string;
@@ -6,7 +6,7 @@ export interface ICategory {
         public_id: string;
         secure_url: string;
     };
-    subCategoriesId: string[];
+    labelsId: string[];
     status: string;
     isDeleted: boolean;
     slug: string;
@@ -15,7 +15,7 @@ export interface ICategory {
 }
 
 //create category payload
-export interface ICreateCategory {
+export interface ICreateSubject {
     name: string;
     description: string;
     image?: {
@@ -26,7 +26,7 @@ export interface ICreateCategory {
 }
 
 
-export interface IUpdateCategory {
+export interface IUpdateSubject {
     title?: string;
     description?: string;
     image?: {
