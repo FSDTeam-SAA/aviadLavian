@@ -49,8 +49,6 @@ const getAllSubject = async ({
         filter.name = { $regex: search, $options: "i" };
     }
 
-    console.log(sortBy);
-
 
     if (sortBy !== "accending" && sortBy !== "decending") {
         throw new CustomError(400, "Invalid sortBy, available sortBy: accending, decending");
