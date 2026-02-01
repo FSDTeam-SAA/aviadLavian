@@ -8,5 +8,5 @@ export const createSubCategory = asyncHandler(async (req: Request, res: Response
   const data: ICreateLabel = req.body;
   const image = req.file as Express.Multer.File | undefined;
   const respose = await LabelService.createLabel(data, image);
-  ApiResponse.sendSuccess(res, 200, "Label created successfully", respose);
+  ApiResponse.sendSuccess(res, 201, "Label created successfully", respose);
 });

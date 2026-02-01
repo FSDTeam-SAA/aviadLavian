@@ -12,7 +12,7 @@ export const createSubject = asyncHandler(
     const data: ICreateSubject = req.body;
     const image = req?.file as Express.Multer.File | undefined;
     const subject = await subjectService.createSubject(data, image);
-    ApiResponse.sendSuccess(res, 200, "Subject created successfully", subject);
+    ApiResponse.sendSuccess(res, 201, "Subject created successfully", subject);
   }
 );
 
