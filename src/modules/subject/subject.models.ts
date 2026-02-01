@@ -54,7 +54,7 @@ subjectSchema.pre("save", async function (next) {
 
   const category = await SubjectModel.findOne({ title: this.title });
   if (category) {
-    throw new CustomError(400, "Category already exist");
+    throw new CustomError(400, "Subject already exist");
   }
 
   this.slug = slugify(this.title, {
@@ -70,7 +70,7 @@ subjectSchema.pre("findOneAndUpdate", async function () {
 
   const category = await SubjectModel.findOne({ title: update.title });
   if (category) {
-    throw new CustomError(400, "Category already exist");
+    throw new CustomError(400, "Subject already exist");
   }
 
   if (update?.title) {
