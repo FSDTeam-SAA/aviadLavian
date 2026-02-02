@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 
 import routes from "./routes/index.api";
 import { globalErrorHandler } from "./helpers/globalErrorHandler";
@@ -10,6 +10,8 @@ import config from "./config";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 import cors from "cors";
+import CustomError from "./helpers/CustomError";
+import { notFound } from "./middleware/notFound";
 
 const app = express();
 
@@ -34,6 +36,7 @@ app.get("/", (req: Request, res: Response) => {
   };
   res.send(serverLiveEmailTemplate(serverInfo));
 });
+app.use(notFound);
 
 //global error handler
 app.use(globalErrorHandler);
