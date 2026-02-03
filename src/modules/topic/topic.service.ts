@@ -5,6 +5,7 @@ import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { LabelModel } from "../label/label.models";
 import { paginationHelper } from "../../utils/pagination";
+import { SubjectModel } from "../subject/subject.models";
 
 
 //create topic
@@ -63,62 +64,118 @@ const getAllTopic = async ({
   page = 1,
   limit = 10,
   search,
+  label,
+  subject,
   sortBy = "accending",
   status = "all",
 }: any) => {
 
-  // Pagination (always defined)
-  const pagination = paginationHelper(page, limit);
+  const skip = (page - 1) * limit;
 
-  // Base filter
-  const filter: any = {
+  // Base topic match
+  const matchStage: any = {
     isDeleted: false,
   };
 
-  // Status filter
   if (status !== "all") {
-    if (status !== "active" && status !== "inactive") throw new CustomError(400, "Invalid status, available status: active, inactive");
-    filter.status = status;
+    if (!["active", "inactive"].includes(status)) {
+      throw new CustomError(400, "Invalid status");
+    }
+    matchStage.status = status;
   }
 
-  // Search filter
   if (search) {
-    filter.name = { $regex: search, $options: "i" };
+    matchStage.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
   }
 
+  const sortStage =
+    sortBy === "decending" ? { createdAt: -1 } : { createdAt: 1 };
 
-  if (sortBy !== "accending" && sortBy !== "decending") {
-    throw new CustomError(400, "Invalid sortBy, available sortBy: accending, decending");
-  }
-  let sort = {};
-  // Sort filter
-  if (sortBy === "accending") {
-    sort = { createdAt: 1 };
-  } else if (sortBy === "decending") {
-    sort = { createdAt: -1 };
+  // Aggregation pipeline
+  const pipeline: any[] = [
+    { $match: matchStage },
+
+    // label join
+    {
+      $lookup: {
+        from: "labels",
+        localField: "labelId",
+        foreignField: "_id",
+        as: "labelId",
+      },
+    },
+    { $unwind: "$labelId" },
+
+    // subject join
+    {
+      $lookup: {
+        from: "subjects",
+        localField: "subjectId",
+        foreignField: "_id",
+        as: "subjectId",
+      },
+    },
+    { $unwind: "$subjectId" },
+  ];
+
+  // Label filter
+  if (label) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { "labelId.slug": { $regex: label, $options: "i" } },
+          { "labelId.title": { $regex: label, $options: "i" } },
+        ],
+      },
+    });
   }
 
-  const topics = await TopicModel.find(filter)
-    .skip(pagination.skip)
-    .limit(pagination.limit).sort(sort);
-  if (topics.length === 0) {
-    throw new CustomError(400, "Topics not found");
+  // Subject filter
+  if (subject) {
+    pipeline.push({
+      $match: {
+        $or: [
+          { "subjectId.slug": { $regex: subject, $options: "i" } },
+          { "subjectId.title": { $regex: subject, $options: "i" } },
+        ],
+      },
+    });
   }
 
-  //corrrect pagination
-  const count = await TopicModel.countDocuments(filter);
-  const totalPages = Math.ceil(count / pagination.limit);
+  // Pagination & sorting
+  pipeline.push(
+    { $sort: sortStage },
+    { $skip: skip },
+    { $limit: Number(limit) }
+  );
+
+  const topics = await TopicModel.aggregate(pipeline);
+
+  // Count for pagination
+  const countPipeline = pipeline.filter(
+    stage =>
+      !("$skip" in stage || "$limit" in stage || "$sort" in stage)
+  );
+
+  countPipeline.push({ $count: "total" });
+
+  const countResult = await TopicModel.aggregate(countPipeline);
+  const totalItems = countResult[0]?.total || 0;
 
   return {
     topics,
     pagination: {
-      page: pagination.page,
-      limit: pagination.limit,
-      totalItems: count,
-      totalPages
+      page: Number(page),
+      limit: Number(limit),
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
     },
   };
-}
+};
+
 
 //get single topic
 const getTopicById = async (topicId: string) => {

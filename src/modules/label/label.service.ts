@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { SortOrder } from "mongoose";
 import { LabelModel } from "./label.models";
 import { ICreateLabel, IUpdateLabel } from "./label.interface";
 import CustomError from "../../helpers/CustomError";
@@ -76,10 +76,12 @@ const getAllLabel = async ({
   page = 1,
   limit = 10,
   search,
-  sortBy,
+  sortBy = "decending",
   status = "all",
+  subjectId,
 }: any) => {
-  // Pagination 
+
+  // Pagination
   const pagination = paginationHelper(page, limit);
 
   // Base filter
@@ -89,33 +91,45 @@ const getAllLabel = async ({
 
   // Status filter
   if (status !== "all") {
-    if (status !== "active" && status !== "inactive") throw new CustomError(400, "Invalid status, available status: active, inactive");
+    if (!["active", "inactive"].includes(status)) {
+      throw new CustomError(
+        400,
+        "Invalid status, available status: active, inactive and support 'all'"
+      );
+    }
     filter.status = status;
   }
 
-  // Search filter
+  // Search filter (label title / name)
   if (search) {
-    filter.name = { $regex: search, $options: "i" };
+    filter.title = { $regex: search, $options: "i" }; // use correct field
   }
 
-  // check sort allow
-  if (sortBy !== "accending" && sortBy !== "decending") {
-    throw new CustomError(400, "Invalid sortBy, available sortBy: accending, decending");
+  // Subject filter
+  if (subjectId) {
+    if (!mongoose.Types.ObjectId.isValid(subjectId)) {
+      throw new CustomError(400, "Invalid subjectId");
+    }
+    filter.subjectId = subjectId;
   }
 
-  //sort
-  let sort = { createdAt: -1 };
-  if (status === "active") {
-    sort = { createdAt: -1 };
-  } else if (status === "inactive") {
-    sort = { createdAt: 1 };
+  // Sort validation
+  if (!["accending", "decending"].includes(sortBy)) {
+    throw new CustomError(
+      400,
+      "Invalid sortBy, available sortBy: accending, decending"
+    );
   }
+
+  const sort: Record<string, SortOrder> =
+    sortBy === "accending"
+      ? { createdAt: 1 as SortOrder }
+      : { createdAt: -1 as SortOrder };
 
   const labels = await LabelModel.find(filter)
     .skip(pagination.skip)
     .limit(pagination.limit)
-    .sort({ createdAt: -1 });
-  if (labels.length === 0) throw new CustomError(400, "labels not found");
+    .sort(sort);
 
   const total = await LabelModel.countDocuments(filter);
 
@@ -128,7 +142,9 @@ const getAllLabel = async ({
       totalPages: Math.ceil(total / pagination.limit),
     },
   };
-}
+};
+
+
 
 //update label
 const updateLabel = async (labelId: string, data: IUpdateLabel, images: any) => {

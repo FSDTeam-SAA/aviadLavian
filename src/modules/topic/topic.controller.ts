@@ -15,6 +15,7 @@ export const createTopic = asyncHandler(async (req: Request, res: Response) => {
 //get all topics
 export const getAllTopic = asyncHandler(async (req: Request, res: Response) => {
   const { topics, pagination } = await topicService.getAllTopic(req.query);
+  
   ApiResponse.sendSuccess(res, 200, "Topics fetched successfully", topics, pagination);
 });
 
