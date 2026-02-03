@@ -26,7 +26,7 @@ labelSchema.pre("save", async function (next) {
 
   const category = await LabelModel.findOne({ title: this.title });
   if (category) {
-    throw new CustomError(400, "SubCategory already exist");
+    throw new CustomError(400, "Label already exist");
   }
 
   this.slug = slugify(this.title, {
@@ -41,7 +41,7 @@ labelSchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
   const category = await LabelModel.findOne({ title: update.title });
   if (category) {
-    throw new CustomError(400, "SubCategory already exist");
+    throw new CustomError(400, "Label already exist");
   }
   if (update?.title) {
     update.slug = slugify(update.title, {
@@ -59,15 +59,5 @@ labelSchema.pre("save", async function (next) {
     throw new CustomError(400, "Subject not found");
   }
 });
-
-//pre middleware check categotyId exist or not in update
-labelSchema.pre("findOneAndUpdate", async function () {
-  const update = this.getUpdate() as any;
-  const subject = await SubjectModel.findById(update.subjectId);
-  if (!subject) {
-    throw new CustomError(400, "Subject not found");
-  }
-});
-
 
 export const LabelModel = mongoose.model<ILabel>("Label", labelSchema);

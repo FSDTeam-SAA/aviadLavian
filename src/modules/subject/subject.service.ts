@@ -26,6 +26,7 @@ const getAllSubject = async ({
     page = 1,
     limit = 10,
     search,
+    sortBy = "accending",
     status = "all",
 }: any) => {
 
@@ -48,10 +49,21 @@ const getAllSubject = async ({
         filter.name = { $regex: search, $options: "i" };
     }
 
+
+    if (sortBy !== "accending" && sortBy !== "decending") {
+        throw new CustomError(400, "Invalid sortBy, available sortBy: accending, decending");
+    }
+    let sort = {};
+    // Sort filter
+    if (sortBy === "accending") {
+        sort = { createdAt: 1 };
+    } else if (sortBy === "decending") {
+        sort = { createdAt: -1 };
+    }
+
     const subjects = await SubjectModel.find(filter)
         .skip(pagination.skip)
-        .limit(pagination.limit)
-        .populate("labelsId");
+        .limit(pagination.limit).sort(sort);
 
     if (!subjects.length) {
         throw new CustomError(404, "Subjects not found");
@@ -74,7 +86,10 @@ const getAllSubject = async ({
 
 //get single category
 const getSingleSubject = async (categoryId: string) => {
-    const subject = await SubjectModel.findOne({ _id: categoryId, isDeleted: false, status: "active" }).populate("labelsId");
+    const subject = await SubjectModel.findOne({ _id: categoryId, isDeleted: false, status: "active" }).populate({
+        path: "labelsId",
+        select: "title slug image",
+    });
     if (!subject) throw new CustomError(400, "Subject not found");
     return subject;
 }
@@ -102,14 +117,27 @@ const updateSubject = async (categoryId: string, data: IUpdateSubject, images: a
 }
 
 //delete category
-const deleteSubject = async (categoryId: string) => {
-    const subject = await SubjectModel.findOneAndUpdate({ _id: categoryId, isDeleted: false }, { isDeleted: true }, { new: true });
-    if (!subject) throw new CustomError(400, "Subject not found");
+const deleteSubject = async (subjectId: string) => {
 
-    //delete previous image
-    // if (category?.image?.public_id) {
-    //     await deleteCloudinary(category?.image?.public_id);
-    // }
+    const subject = await SubjectModel.findOneAndDelete({
+        _id: subjectId,
+        $or: [
+            { labelsId: { $exists: false } },
+            { labelsId: { $size: 0 } }
+        ]
+    });
+
+    if ((subject as any)?.labelsId?.length > 0) {
+        throw new CustomError(400, "Subject has labels associated with it, cannot delete");
+    }
+
+    if (!subject) {
+        throw new CustomError(400, "Subject not found");
+    }
+
+    if (subject?.image?.public_id) {
+        await deleteCloudinary(subject?.image?.public_id);
+    }
 
     return subject;
 }

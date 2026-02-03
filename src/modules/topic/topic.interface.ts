@@ -1,12 +1,14 @@
-import { ObjectId } from "mongoose";
+import mongoose from "mongoose";
 
-    
-    export interface ILabel {
+export interface ITopic {
   _id: string;
   title: string;
   description: string;
-  subjectId: ObjectId;
-  topicsId: string[];
+  labelId: mongoose.Types.ObjectId;
+  subjectId: mongoose.Types.ObjectId;
+  articlesId: string[];
+  quizsId: string[];
+  flashcardsId: string[];
   image?: {
     public_id: string;
     secure_url: string;
@@ -18,13 +20,15 @@ import { ObjectId } from "mongoose";
   updatedAt?: Date;
 }
 
-export interface ICreateLabel {
+export interface ICreateTopic {
   title: string;
   description?: string;
+  labelId: mongoose.Types.ObjectId;
   status?: string;
 }
 
-export interface IUpdateLabel {
+
+export interface IUpdateTopic {
   title?: string;
   description?: string;
   status?: string;
