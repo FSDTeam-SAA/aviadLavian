@@ -118,29 +118,27 @@ const updateSubject = async (categoryId: string, data: IUpdateSubject, images: a
 
 //delete category
 const deleteSubject = async (subjectId: string) => {
-
-    const subject = await SubjectModel.findOneAndDelete({
-        _id: subjectId,
-        $or: [
-            { labelsId: { $exists: false } },
-            { labelsId: { $size: 0 } }
-        ]
-    });
-
-    if ((subject as any)?.labelsId?.length > 0) {
-        throw new CustomError(400, "Subject has labels associated with it, cannot delete");
-    }
+    const subject = await SubjectModel.findById(subjectId);
 
     if (!subject) {
         throw new CustomError(400, "Subject not found");
     }
 
+    // Check if it has associated labels
+    if (subject?.labelsId?.length > 0) {
+        throw new CustomError(400, "Subject has labels associated with it, cannot delete");
+    }
+
+    const deletedSubject = await SubjectModel.findByIdAndDelete(subjectId);
+    if (!deletedSubject) throw new CustomError(400, "Subject not deleted");
+
+    // Delete from Cloudinary if needed
     if (subject?.image?.public_id) {
         await deleteCloudinary(subject?.image?.public_id);
     }
 
     return subject;
-}
+};
 
 export const subjectService = {
     createSubject,

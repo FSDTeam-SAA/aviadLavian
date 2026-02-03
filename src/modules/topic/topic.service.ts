@@ -5,7 +5,6 @@ import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { LabelModel } from "../label/label.models";
 import { paginationHelper } from "../../utils/pagination";
-import { SubjectModel } from "../subject/subject.models";
 
 
 //create topic
@@ -69,9 +68,6 @@ const getAllTopic = async ({
   sortBy = "accending",
   status = "all",
 }: any) => {
-
-  const skip = (page - 1) * limit;
-
   // Base topic match
   const matchStage: any = {
     isDeleted: false,
@@ -144,15 +140,18 @@ const getAllTopic = async ({
       },
     });
   }
-
+  const pagination = paginationHelper(page, limit);
   // Pagination & sorting
   pipeline.push(
     { $sort: sortStage },
-    { $skip: skip },
-    { $limit: Number(limit) }
+    { $skip: pagination.skip },
+    { $limit: pagination.limit }
   );
 
   const topics = await TopicModel.aggregate(pipeline);
+  if (topics.length === 0) {
+    throw new CustomError(400, "Topics not found");
+  }
 
   // Count for pagination
   const countPipeline = pipeline.filter(
@@ -163,13 +162,14 @@ const getAllTopic = async ({
   countPipeline.push({ $count: "total" });
 
   const countResult = await TopicModel.aggregate(countPipeline);
+
   const totalItems = countResult[0]?.total || 0;
 
   return {
     topics,
     pagination: {
-      page: Number(page),
-      limit: Number(limit),
+      page: page,
+      limit: limit,
       totalItems,
       totalPages: Math.ceil(totalItems / limit),
     },
@@ -223,29 +223,20 @@ const updateTopic = async (topicId: string, data: any, image?: Express.Multer.Fi
 //delete topic
 const deleteTopic = async (topicId: string) => {
 
-  const topic = await TopicModel.findOneAndDelete({
-    _id: topicId,
-    $and: [
-      {
-        $or: [
-          { articlesId: { $exists: false } },
-          { articlesId: { $size: 0 } },
-        ],
-      },
-      {
-        $or: [
-          { quizsId: { $exists: false } },
-          { quizsId: { $size: 0 } },
-        ],
-      },
-      {
-        $or: [
-          { flashcardsId: { $exists: false } },
-          { flashcardsId: { $size: 0 } },
-        ],
-      },
-    ],
-  });
+  //find topic 
+  //TODO: check if topic has associated content for now not check but in future check it.
+  const topic = await TopicModel.findById(topicId)
+  // .populate({
+  //   path: "articlesId",
+  //   select: "name slug image _id status",
+  // }).populate({
+  //   path: "quizsId",
+  //   select: "name slug image _id status",
+  // }).populate({
+  //   path: "flashcardsId",
+  //   select: "name slug image _id status",
+  // })
+  if (!topic) throw new CustomError(400, "Topic not found");
 
   if (
     (topic as any)?.articlesId?.length > 0 ||
@@ -257,6 +248,19 @@ const deleteTopic = async (topicId: string) => {
       "Topic has associated content, cannot delete"
     );
   }
+
+  //now delete topic
+  const deletedTopic = await TopicModel.findByIdAndDelete(topicId);
+  if (!deletedTopic) throw new CustomError(400, "Topic not deleted");
+
+  //pull topicId from label
+  await LabelModel.findOneAndUpdate(
+    { topicsId: topicId },
+    { $pull: { topicsId: topicId } }
+  );
+
+
+
 
   if (!topic) {
     throw new CustomError(400, "Topic not found");
