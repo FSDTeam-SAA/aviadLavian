@@ -1,13 +1,17 @@
 import express from "express";
-import { createFlashcard } from "./flashcard.controller";
+import { createFlashcard, deleteFlashcard, getAllFlashcards, getFlashcard, updateFlashcard } from "./flashcard.controller";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
-import { createFlashcardSchema } from "./flashcard.validation";
-import { uploadSingle } from "../../middleware/multer.midleware";
+import { createFlashcardSchema, updateFlashcardSchema } from "./flashcard.validation";
+import { upload } from "../../middleware/multer.midleware";
+import { allowRole, authGuard } from "../../middleware/auth.middleware";
+import { is } from "zod/v4/locales";
 
 const router = express.Router();
 
-//TODO: customize as needed
-
-//router.post("/create-flashcard", uploadSingle("image"), validateRequest(createFlashcardSchema), createFlashcard);
+router.post("/create-flashcard", authGuard, allowRole("admin"), upload.single("image"), validateRequest(createFlashcardSchema), createFlashcard);
+router.get("/get-flashcard/:flashcardId", getFlashcard);
+router.get("/get-flashcards", authGuard, allowRole("admin", "user"), getAllFlashcards);
+router.patch("/update-flashcard/:flashcardId", authGuard, allowRole("admin"), upload.single("image"), validateRequest(updateFlashcardSchema), updateFlashcard);
+router.delete("/delete-flashcard/:flashcardId", authGuard, allowRole("admin"), deleteFlashcard);
 
 export default router;
