@@ -105,50 +105,13 @@ export const userService = {
     currentPassword: string,
     newPassword: string,
   ) {
-    // Validation
-    if (!currentPassword || !newPassword) {
-      throw new CustomError(
-        400,
-        "Current password and new password are required",
-      );
-    }
-
-    // Find user
     const user = await userModel.findOne({ email });
 
     if (!user) {
       throw new CustomError(404, "User not found");
     }
 
-    // Verify current password
-    const isPasswordValid = await user.comparePassword(currentPassword);
-
-    if (!isPasswordValid) {
-      throw new CustomError(401, "Current password is incorrect");
-    }
-
-    // Validate new password
-    if (newPassword.length < 6) {
-      throw new CustomError(
-        400,
-        "New password must be at least 6 characters long",
-      );
-    }
-
-    // Check if new password is different from current
-    if (currentPassword === newPassword) {
-      throw new CustomError(
-        400,
-        "New password must be different from current password",
-      );
-    }
-
-    // Update password
-    user.password = newPassword;
-
-    // Force logout - clear refresh token
-    user.refreshToken = null;
-
+    await user.changePassword(currentPassword, newPassword);
     await user.save();
 
     return true;

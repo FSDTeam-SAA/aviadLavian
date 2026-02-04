@@ -13,7 +13,6 @@ export interface UpdateUserPayload {
   email?: string;
   profession?: string;
   country?: string;
-  password?: string;
 }
 export interface IUser extends Document {
   _id: string;
@@ -48,4 +47,8 @@ export interface IUser extends Document {
   comparePassword: (password: string) => Promise<boolean>;
   createAccessToken: () => string;
   createRefreshToken: () => string;
+  changePassword(
+    currentPassword: string,
+    newPassword: string,  
+  ): Promise<boolean>;
 }
