@@ -13,7 +13,6 @@ export interface UpdateUserPayload {
   email?: string;
   profession?: string;
   country?: string;
-  password?: string;
 }
 export interface IUser extends Document {
   _id: string;
