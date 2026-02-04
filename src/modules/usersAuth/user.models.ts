@@ -125,7 +125,31 @@ userSchema.methods.comparePassword = async function (
 ): Promise<boolean> {
   return await bcrypt.compare(password, this.password);
 };
+// Change password method
+userSchema.methods.changePassword = async function (
+  currentPassword: string,
+  newPassword: string,
+): Promise<boolean> {
+  const isValid = await this.comparePassword(currentPassword);
 
+  if (!isValid) {
+    throw new CustomError(401, "Current password is incorrect");
+  }
+
+  const isSame = await this.comparePassword(newPassword);
+
+  if (isSame) {
+    throw new CustomError(
+      400,
+      "New password must be different from current password",
+    );
+  }
+
+  this.password = newPassword;
+  this.refreshToken = null;
+
+  return true;
+};
 //create access token
 userSchema.methods.createAccessToken = function () {
   return jwt.sign(

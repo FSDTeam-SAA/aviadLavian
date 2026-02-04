@@ -47,4 +47,8 @@ export interface IUser extends Document {
   comparePassword: (password: string) => Promise<boolean>;
   createAccessToken: () => string;
   createRefreshToken: () => string;
+  changePassword(
+    currentPassword: string,
+    newPassword: string,  
+  ): Promise<boolean>;
 }

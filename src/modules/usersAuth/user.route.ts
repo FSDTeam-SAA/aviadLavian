@@ -12,32 +12,64 @@ import {
 } from "./user.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
+import { validateRequest } from "../../middleware/validateRequest.middleware";
+import {
+  changePasswordSchema,
+  forgetPasswordSchema,
+  loginSchema,
+  refreshTokenSchema,
+  registerUserSchema,
+  resetPasswordSchema,
+  updateUserSchema,
+} from "./user.validation";
 
 const router = Router();
 // auth
-router.post("/register-user", registration);
+router.post(
+  "/register-user",
+  validateRequest(registerUserSchema),
+  registration,
+);
 
-router.post("/login", login);
+router.post("/login", validateRequest(loginSchema), login);
 router.post("/logout", logout);
 
 // // password
 // router.post("/forget-password", forgetPassword);
 // router.post("/reset-password", resetPassword);
-router.post("/forget-password", forgetPassword);
-router.post("/reset-password/:token", resetPassword);
+router.post(
+  "/forget-password",
+  validateRequest(forgetPasswordSchema),
+  forgetPassword,
+);
+router.post(
+  "/reset-password/:token",
+  validateRequest(resetPasswordSchema),
+  resetPassword,
+);
 
 // token
-router.post("/refresh-token", generateAccessToken);
+router.post(
+  "/refresh-token",
+  validateRequest(refreshTokenSchema),
+  generateAccessToken,
+);
 
 router
   .route("/update-user")
   .patch(
     authGuard,
     upload.fields([{ name: "image", maxCount: 1 }]),
+    validateRequest(updateUserSchema),
     updateUser,
   );
 // Route
-router.patch("/change-password", authGuard, updatePassword);
+router.patch(
+  "/change-password",
+  authGuard,
+  validateRequest(changePasswordSchema),
+  updatePassword,
+);
 router.route("/verify-email").post(authGuard, verifyEmail);
 
 export const userRoute = router;
