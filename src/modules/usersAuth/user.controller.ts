@@ -6,6 +6,7 @@ import ApiResponse from "../../utils/apiResponse";
 import {
   accountVerifyTemplate,
   forgotPasswordOtpTemplate,
+  resetPasswordLinkTemplate,
 } from "../../tempaletes/auth.templates";
 import { mailer } from "../../helpers/nodeMailer";
 import config from "../../config";
@@ -32,7 +33,7 @@ export const registration = asyncHandler(async (req, res) => {
   });
   const { password, verificationOtp, ...rest } = user.toObject();
 
-  ApiResponse.sendSuccess(res, 200, "User registered successfully", {
+  ApiResponse.sendSuccess(res, 201, "User registered successfully", {
     rest,
   });
 });
@@ -70,19 +71,51 @@ export const login = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "Logged in", {
     email: user.email,
     accessToken,
+    refreshToken,
   });
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
-  const user = await userService.updateUser(
-    (req as AuthRequest).user.email,
+  const currentEmail = (req as AuthRequest).user.email;
+
+  const result = await userService.updateUser(
+    currentEmail,
     req.body,
     req.files,
   );
 
-  ApiResponse.sendSuccess(res, 200, "User updated", user);
-});
+  if (result.emailChanged) {
+    return ApiResponse.sendSuccess(
+      res,
+      200,
+      "Email updated successfully. Please login again.",
+      {
+        forceLogout: true,
+      },
+    );
+  }
 
+  ApiResponse.sendSuccess(res, 200, "User updated successfully", result.user);
+});
+// Controller
+export const updatePassword = asyncHandler(async (req, res) => {
+  const currentEmail = (req as AuthRequest).user.email;
+
+  await userService.changePassword(
+    currentEmail,
+    req.body.currentPassword,
+    req.body.newPassword,
+  );
+
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Password changed successfully. Please login again.",
+    {
+      forceLogout: true,
+    },
+  );
+});
 export const logout = asyncHandler(async (req, res) => {
   await userService.logout(req.body.email);
 
@@ -92,24 +125,26 @@ export const logout = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "Logged out", {});
 });
 
+// user.controller.ts
 export const forgetPassword = asyncHandler(async (req, res) => {
-  const { user, otp } = await userService.forgetPassword(req.body.email);
+  const { resetToken, user } = await userService.forgetPassword(req.body.email);
+
+  const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
 
   await mailer({
-    subject: "Password Reset OTP",
-    template: forgotPasswordOtpTemplate(user.name, otp.toString()),
     email: user.email,
+    subject: "Reset your password",
+    template: resetPasswordLinkTemplate(user.name, resetUrl),
   });
 
-  ApiResponse.sendSuccess(res, 200, "Otp sent", {});
+  ApiResponse.sendSuccess(res, 200, "Reset link sent to email", {});
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {
-  await userService.resetPassword(
-    req.body.email,
-    req.body.otp,
-    req.body.password,
-  );
+  const { token } = req.params;
+  const { password } = req.body;
+
+  await userService.resetPassword(token as string, password);
 
   ApiResponse.sendSuccess(res, 200, "Password reset successful", {});
 });

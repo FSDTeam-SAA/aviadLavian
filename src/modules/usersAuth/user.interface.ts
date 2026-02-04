@@ -8,6 +8,13 @@ export enum status {
   inactive = "inactive",
   blocked = "blocked",
 }
+export interface UpdateUserPayload {
+  name?: string;
+  email?: string;
+  profession?: string;
+  country?: string;
+  password?: string;
+}
 export interface IUser extends Document {
   _id: string;
   name: string;
@@ -24,6 +31,8 @@ export interface IUser extends Document {
   status: status;
   country: string;
   addressIds?: string[];
+  passwordResetToken: string;
+  passwordResetExpire: Date | null;
   isVerified: boolean;
   isDeleted: boolean;
   verificationOtp: number | null;

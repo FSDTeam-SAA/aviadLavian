@@ -8,6 +8,7 @@ import {
   generateAccessToken,
   updateUser,
   verifyEmail,
+  updatePassword,
 } from "./user.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -19,9 +20,11 @@ router.post("/register-user", registration);
 router.post("/login", login);
 router.post("/logout", logout);
 
-// password
+// // password
+// router.post("/forget-password", forgetPassword);
+// router.post("/reset-password", resetPassword);
 router.post("/forget-password", forgetPassword);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password/:token", resetPassword);
 
 // token
 router.post("/refresh-token", generateAccessToken);
@@ -33,7 +36,8 @@ router
     upload.fields([{ name: "image", maxCount: 1 }]),
     updateUser,
   );
-
+// Route
+router.patch("/change-password", authGuard, updatePassword);
 router.route("/verify-email").post(authGuard, verifyEmail);
 
 export const userRoute = router;

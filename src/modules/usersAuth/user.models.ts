@@ -76,6 +76,12 @@ const userSchema = new Schema<IUser>(
     frogetPasswordOtpExpire: {
       type: Date,
     },
+    passwordResetToken: {
+      type: String,
+    },
+    passwordResetExpire: {
+      type: Date || null,
+    },
     resetPassword: {
       otp: {
         type: Number,
