@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import CustomError from "../../helpers/CustomError";
 import config from "../../config";
 import { uploadCloudinary } from "../../helpers/cloudinary";
-import { IUser } from "./user.interface";
+import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
 
 export const userService = {
@@ -51,28 +51,108 @@ export const userService = {
     return { user, accessToken, refreshToken };
   },
 
-  async updateUser(email: string, values: any, files?: any) {
-    const user = await userModel
-      .findOneAndUpdate(
-        { email },
-        { $set: values },
-        { new: true, runValidators: true },
-      )
-      .select("email name status profileImage");
+  async updateUser(email: string, payload: UpdateUserPayload, files?: any) {
+    const user = await userModel.findOne({ email });
 
-    if (!user) throw new CustomError(400, "Email not found");
+    if (!user) {
+      throw new CustomError(404, "User not found");
+    }
+
+    let emailChanged = false;
+
+    if (payload.name) user.name = payload.name;
+    if (payload.profession) user.profession = payload.profession;
+    if (payload.country) user.country = payload.country;
+
+    // change email
+    if (payload.email && payload.email !== user.email) {
+      const exists = await userModel.findOne({
+        email: payload.email,
+      });
+
+      if (exists) {
+        throw new CustomError(409, "Email already in use");
+      }
+
+      user.email = payload.email;
+      emailChanged = true;
+
+      // force logout
+      user.refreshToken = null;
+    }
 
     if (files?.image?.length > 0) {
       const uploaded = await uploadCloudinary(files.image[0].path);
       if (uploaded) {
         user.profileImage.push(uploaded);
-        await user.save();
       }
     }
 
-    return user;
-  },
+    await user.save();
 
+    return {
+      user: {
+        name: user.name,
+        email: user.email,
+        profileImage: user.profileImage,
+      },
+      emailChanged,
+    };
+  },
+  // Service
+  async changePassword(
+    email: string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    // Validation
+    if (!currentPassword || !newPassword) {
+      throw new CustomError(
+        400,
+        "Current password and new password are required",
+      );
+    }
+
+    // Find user
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      throw new CustomError(404, "User not found");
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+
+    if (!isPasswordValid) {
+      throw new CustomError(401, "Current password is incorrect");
+    }
+
+    // Validate new password
+    if (newPassword.length < 6) {
+      throw new CustomError(
+        400,
+        "New password must be at least 6 characters long",
+      );
+    }
+
+    // Check if new password is different from current
+    if (currentPassword === newPassword) {
+      throw new CustomError(
+        400,
+        "New password must be different from current password",
+      );
+    }
+
+    // Update password
+    user.password = newPassword;
+
+    // Force logout - clear refresh token
+    user.refreshToken = null;
+
+    await user.save();
+
+    return true;
+  },
   async logout(email: string) {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "Email not found");
@@ -91,7 +171,7 @@ export const userService = {
     // hash token before saving
     const hashedToken = crypto
       .createHash("sha256")
-      .update(resetToken) 
+      .update(resetToken)
       .digest("hex");
 
     user.passwordResetToken = hashedToken;

@@ -76,15 +76,46 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
-  const user = await userService.updateUser(
-    (req as AuthRequest).user.email,
+  const currentEmail = (req as AuthRequest).user.email;
+
+  const result = await userService.updateUser(
+    currentEmail,
     req.body,
     req.files,
   );
 
-  ApiResponse.sendSuccess(res, 200, "User updated", user);
-});
+  if (result.emailChanged) {
+    return ApiResponse.sendSuccess(
+      res,
+      200,
+      "Email updated successfully. Please login again.",
+      {
+        forceLogout: true,
+      },
+    );
+  }
 
+  ApiResponse.sendSuccess(res, 200, "User updated successfully", result.user);
+});
+// Controller
+export const updatePassword = asyncHandler(async (req, res) => {
+  const currentEmail = (req as AuthRequest).user.email;
+
+  await userService.changePassword(
+    currentEmail,
+    req.body.currentPassword,
+    req.body.newPassword,
+  );
+
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Password changed successfully. Please login again.",
+    {
+      forceLogout: true,
+    },
+  );
+});
 export const logout = asyncHandler(async (req, res) => {
   await userService.logout(req.body.email);
 

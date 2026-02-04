@@ -8,6 +8,7 @@ import {
   generateAccessToken,
   updateUser,
   verifyEmail,
+  updatePassword,
 } from "./user.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -35,7 +36,8 @@ router
     upload.fields([{ name: "image", maxCount: 1 }]),
     updateUser,
   );
-
+// Route
+router.patch("/change-password", authGuard, updatePassword);
 router.route("/verify-email").post(authGuard, verifyEmail);
 
 export const userRoute = router;
