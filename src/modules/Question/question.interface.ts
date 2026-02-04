@@ -13,6 +13,7 @@ export interface IQuestion {
   options: IOption[];
   topicId: Types.ObjectId;
   difficulty: string;
+  marks: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
