@@ -45,11 +45,11 @@ export const resetPasswordSchema = z
   })
   .strict();
 
-export const refreshTokenSchema = z
-  .object({
-    refreshToken: z.string().min(1, "Refresh token required").optional(),
-  })
-  .strict();
+// export const refreshTokenSchema = z
+//   .object({
+//     refreshToken: z.string().min(1, "Refresh token required").optional(),
+//   })
+//   .strict();
 
 export const updateUserSchema = z
   .object({

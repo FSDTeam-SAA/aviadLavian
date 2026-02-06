@@ -178,7 +178,9 @@ export const userService = {
 
     const user = await userModel.findById(decoded.userId);
     if (!user) throw new CustomError(400, "User not found");
-
+    if (user.refreshToken !== refreshToken) {
+      throw new CustomError(401, "Invalid refresh token");
+    }
     const accessToken = user.createAccessToken();
     return accessToken;
   },

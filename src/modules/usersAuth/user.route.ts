@@ -17,7 +17,6 @@ import {
   changePasswordSchema,
   forgetPasswordSchema,
   loginSchema,
-  refreshTokenSchema,
   registerUserSchema,
   resetPasswordSchema,
   updateUserSchema,
@@ -51,7 +50,7 @@ router.post(
 // token
 router.post(
   "/refresh-token",
-  validateRequest(refreshTokenSchema),
+
   generateAccessToken,
 );
 
