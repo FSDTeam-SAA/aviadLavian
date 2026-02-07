@@ -8,17 +8,42 @@ import {
   hideQuestion,
   unhideQuestion,
 } from "./question.controller";
-import { allowRole} from "../../middleware/auth.middleware";
+import { allowRole, authGuard } from "../../middleware/auth.middleware";
 
 const router = Router();
 
-router.post("/", allowRole("admin"), createQuestion);
-router.get("/", allowRole("admin"), getAllQuestions);
-router.get("/:id", allowRole("admin"), getQuestionById);
-router.patch("/:id", allowRole("admin"), updateQuestion);
-router.delete("/:id", allowRole("admin"), deleteQuestion);
+router.post("/create-question", authGuard, allowRole("admin"), createQuestion);
+router.get(
+  "/get-all-questions",
+  authGuard,
+  allowRole("admin"),
+  getAllQuestions,
+);
+router.get(
+  "/single-question/:id",
+  authGuard,
+  allowRole("admin"),
+  getQuestionById,
+);
 
-router.patch("/:id/hide", allowRole("admin"), hideQuestion);
-router.patch("/:id/unhide", allowRole("admin"), unhideQuestion);
+router.patch(
+  "/update-question/:id",
+  authGuard,
+  allowRole("admin"),
+  updateQuestion,
+);
+router.delete(
+  "/delete-question/:id",
+  authGuard,
+  allowRole("admin"),
+  deleteQuestion,
+);
+router.patch("/hide-question/:id", authGuard, allowRole("admin"), hideQuestion);
+router.patch(
+  "/unhide-question/:id",
+  authGuard,
+  allowRole("admin"),
+  unhideQuestion,
+);
 
-export default router;
+export const questionRoute = router;
