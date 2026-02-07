@@ -5,7 +5,7 @@ import ApiResponse from "../../utils/apiResponse";
 export const createQuestion = asyncHandler(async (req, res) => {
   const question = await questionService.createQuestion({
     ...req.body,
-    createdBy: (req as any).user._id,
+    createdBy: req?.user?._id,
   });
 
   ApiResponse.sendSuccess(res, 201, "Question created", question);

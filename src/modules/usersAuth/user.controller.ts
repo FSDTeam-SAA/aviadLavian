@@ -12,10 +12,6 @@ import { mailer } from "../../helpers/nodeMailer";
 import config from "../../config";
 import { userService } from "./user.service";
 
-interface AuthRequest extends Request {
-  user: { email: string };
-}
-
 export const registration = asyncHandler(async (req, res) => {
   const user = await userService.registerUser(req.body);
 
@@ -40,7 +36,7 @@ export const registration = asyncHandler(async (req, res) => {
 
 export const verifyEmail = asyncHandler(async (req, res) => {
   const user = await userService.verifyEmail(
-    (req as AuthRequest).user.email,
+    req?.user?.email as string,
     req.body.otp,
   );
 
@@ -70,13 +66,15 @@ export const login = asyncHandler(async (req, res) => {
 
   ApiResponse.sendSuccess(res, 200, "Logged in", {
     email: user.email,
+    role: user.role,
+    name: user.name,
     accessToken,
     refreshToken,
   });
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
-  const currentEmail = (req as AuthRequest).user.email;
+  const currentEmail = req?.user?.email as string;
 
   const result = await userService.updateUser(
     currentEmail,
@@ -99,7 +97,7 @@ export const updateUser = asyncHandler(async (req, res) => {
 });
 // Controller
 export const updatePassword = asyncHandler(async (req, res) => {
-  const currentEmail = (req as AuthRequest).user.email;
+  const currentEmail = req?.user?.email as string;
 
   await userService.changePassword(
     currentEmail,

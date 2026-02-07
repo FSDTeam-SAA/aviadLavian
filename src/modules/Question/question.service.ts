@@ -1,7 +1,8 @@
 import { QuestionModel } from "./question.model";
 import CustomError from "../../helpers/CustomError";
+import { IQuestion } from "./question.interface";
 
-const createQuestion = async (payload: any) => {
+const createQuestion = async (payload: Partial<IQuestion>) => {
   return await QuestionModel.create(payload);
 };
 
