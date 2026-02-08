@@ -21,7 +21,9 @@ export const authGuard = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const accessToken = req.cookies?.accessToken || req.headers?.authorization?.split("Bearer ")[1];
+    const accessToken =
+      req.cookies?.accessToken ||
+      req.headers?.authorization?.split("Bearer ")[1];
 
     if (!accessToken) {
       throw new CustomError(401, "Access token not found!");
@@ -58,19 +60,27 @@ export const authGuard = async (
 
 //check role admin or user i want array of roles
 export const allowRole = (...roles: string[]) => {
-  return async (req: AuthRequest, _res: Response, next: NextFunction): Promise<void> => {
+  return async (
+    req: AuthRequest,
+    _res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       if (!req.user?.role) {
-        throw new CustomError(403, "You are not authorized to access this route!");
+        throw new CustomError(
+          403,
+          "You are not authorized to access this route!",
+        );
       }
       if (!roles.includes(req.user.role)) {
-        throw new CustomError(403, "You are not authorized to access this route!");
+        throw new CustomError(
+          403,
+          "You are not authorized to access this route!",
+        );
       }
       next();
     } catch (error) {
       next(error);
     }
-  }
-}
-
-
+  };
+};

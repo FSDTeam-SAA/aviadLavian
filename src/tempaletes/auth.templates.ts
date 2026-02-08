@@ -1,6 +1,6 @@
 export const forgotPasswordOtpTemplate = (
   name: string,
-  otp: string
+  otp: string,
 ): string => {
   return `
 <!DOCTYPE html>
@@ -152,7 +152,10 @@ export const forgotPasswordOtpTemplate = (
 `;
 };
 
-export const accountVerifyTemplate = (name: string, otp: number |null): any => {
+export const accountVerifyTemplate = (
+  name: string,
+  otp: number | null,
+): any => {
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -222,6 +225,44 @@ export const accountVerifyTemplate = (name: string, otp: number |null): any => {
     <div class="footer">
       © ${new Date().getFullYear()} Your App Name
     </div>
+  </div>
+</body>
+</html>
+`;
+};
+export const resetPasswordLinkTemplate = (
+  name: string,
+  resetUrl: string,
+): string => {
+  return `
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial; background:#f4f6f8; padding:40px;">
+  <div style="max-width:600px;margin:auto;background:#fff;padding:30px;border-radius:8px;">
+    <h2 style="color:#2563eb;">Reset Your Password</h2>
+
+    <p>Hi <strong>${name}</strong>,</p>
+
+    <p>
+      We received a request to reset your password.
+      Click the button below to continue.
+    </p>
+
+    <div style="text-align:center;margin:30px 0;">
+      <a href="${resetUrl}"
+         style="background:#2563eb;color:#fff;padding:14px 28px;
+                border-radius:6px;text-decoration:none;font-weight:bold;">
+        Reset Password
+      </a>
+    </div>
+
+    <p style="color:#dc2626;font-weight:600;">
+      This link is valid for 10 minutes only.
+    </p>
+
+    <p>If you didn’t request this, please ignore this email.</p>
+
+    <p>— VIRUS COMPUTER Team</p>
   </div>
 </body>
 </html>
