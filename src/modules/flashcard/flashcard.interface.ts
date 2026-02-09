@@ -34,6 +34,6 @@ export interface GetAllFlashcardsParams {
   page?: string;
   limit?: string;
   sort?: string;
-  search?: string;
+  topicId?: string;
   status?: string;
 }
