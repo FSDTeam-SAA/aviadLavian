@@ -25,7 +25,7 @@ export const getAllFlashcards = asyncHandler(async (req: Request, res: Response)
 
   const isAdmin = (req as any).user?.role === "admin"? true : false;
 
-  const { flashcards, meta } = await flashcardService.getAllFlashcards(req.query, isAdmin);
+  const { flashcards, meta } = await flashcardService.getAllFlashcards(req.query, (req as any).user?._id, isAdmin);
   ApiResponse.sendSuccess(res, 200, "Flashcards found ", flashcards, meta);
 });
 
