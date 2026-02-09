@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import config from "../config";
 import CustomError from "../helpers/CustomError";
 import { userModel } from "../modules/usersAuth/user.models";
+import { redisTokenService } from "../helpers/redisTokenService";
 
 interface TokenPayload extends JwtPayload {
   userId: string;
@@ -27,6 +28,13 @@ export const authGuard = async (
 
     if (!accessToken) {
       throw new CustomError(401, "Access token not found!");
+    }
+
+    // ✅ NEW: Check if token is blacklisted
+    const isBlacklisted =
+      await redisTokenService.isTokenBlacklisted(accessToken);
+    if (isBlacklisted) {
+      throw new CustomError(401, "Token has been revoked. Please login again.");
     }
 
     const decoded = jwt.verify(

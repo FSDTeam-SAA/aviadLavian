@@ -31,7 +31,7 @@ router.post(
 );
 
 router.post("/login", validateRequest(loginSchema), login);
-router.post("/logout", logout);
+router.post("/logout", authGuard, logout);
 
 // // password
 // router.post("/forget-password", forgetPassword);
