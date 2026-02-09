@@ -1,10 +1,10 @@
-import chalk from 'chalk';
-import dotenv from 'dotenv';
-import { connectDatabase } from './database/db';
-import app from './app';
-import config from './config';
-
+import chalk from "chalk";
+import dotenv from "dotenv";
 dotenv.config();
+import { connectDatabase } from "./database/db";
+import app from "./app";
+import config from "./config/index";
+import "./config/redis";
 
 const PORT = config.port ? Number(config.port) : 8000;
 
@@ -15,6 +15,6 @@ connectDatabase()
     });
   })
   .catch((error: unknown) => {
-    console.error(chalk.red('Database connection failed!!'), error);
+    console.error(chalk.red("Database connection failed!!"), error);
     process.exit(1);
   });
