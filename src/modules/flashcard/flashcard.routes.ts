@@ -4,7 +4,6 @@ import { validateRequest } from "../../middleware/validateRequest.middleware";
 import { createFlashcardSchema, updateFlashcardSchema } from "./flashcard.validation";
 import { upload } from "../../middleware/multer.midleware";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
-import { is } from "zod/v4/locales";
 
 const router = express.Router();
 

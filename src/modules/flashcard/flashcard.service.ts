@@ -3,6 +3,7 @@ import { GetAllFlashcardsParams, ICreateFlashcard } from "./flashcard.interface"
 import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { paginationHelper } from "../../utils/pagination";
+import { Types } from "mongoose";
 
 const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.File) => {
 
@@ -26,79 +27,113 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
 const getSingleFlashcard = async (id: string) => {
   const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true });
   if (!flashcard) throw new CustomError(404, "Flashcard not found");
-  
+
   return flashcard;
 }
 
 //get all flashcards
-const getAllFlashcards = async ({
-  page,
-  limit,
-  sort = "accending",
-  search,
-  status = "active",
-}: GetAllFlashcardsParams, isAdmin: boolean) => {
-
-  // Pagination
+const getAllFlashcards = async (
+  { page, limit, sort = "accending", topicId, status = "active" }: GetAllFlashcardsParams,
+  userId?: string,
+  isAdmin: boolean = false
+) => {
   const { page: currentPage, limit: pageLimit, skip } = paginationHelper(page, limit);
+  const now = new Date();
 
-  //status can only be active or inactive
-  if (status !== "active" && status !== "inactive") {
-    throw new CustomError(400, "Invalid status parameter, allowed values are 'active' and 'inactive'");
-  }
+  const match: any = {};
 
-  //allow only admin too se both inactive and active flashcards, but user can see only active flashcards
-  let query: any = {};
-
-  // Status filter logic
+  // Status filter
   if (isAdmin) {
-    if (status === "active") query.isActive = true;
-    else if (status === "inactive") query.isActive = false;
+    if (status === "active") match.isActive = true;
+    else if (status === "inactive") match.isActive = false;
   } else {
-    //users can only see active flashcards
-    query.isActive = true;
+    match.isActive = true;
   }
 
-  //if search is provided
-  if (search) {
-    const regex = new RegExp(search, "i");
-    query = {
-      $or: [
-        { question: regex },
-        { topicId: { $in: [regex] } },
-      ],
-    };
+  // Search filter
+  if (topicId) {
+    const regex = new RegExp(topicId, "i");
+    match.$or = [
+      { question: regex },
+      { topicId: { $in: [regex] } },
+    ];
   }
 
+  const sortObj: any = sort === "accending" ? { createdAt: 1 } : { createdAt: -1 };
 
-  //check if sort is accending or decending
-  if (sort !== "accending" && sort !== "decending") {
-    throw new CustomError(400, "Invalid sort parameter, allowed values are 'accending' and 'decending'");
+  // Aggregation pipeline with $facet for pagination + total
+  const pipeline: any[] = [
+    { $match: match },
+  ];
+
+  if (userId) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: "flashcardprogresses",
+          let: { flashcardId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$flashcardId", "$$flashcardId"] },
+                    { $eq: ["$userId", new Types.ObjectId(userId)] }
+                  ]
+                }
+              }
+            },
+            { $project: { flashcardId: 1, nextReviewAt: 1 } }
+          ],
+          as: "progress"
+        }
+      },
+      {
+        $addFields: { progress: { $arrayElemAt: ["$progress", 0] } }
+      },
+      {
+        $match: {
+          $or: [
+            { "progress.nextReviewAt": { $lte: now } },
+            { "progress": { $eq: null } }
+          ]
+        }
+      }
+    );
   }
-  // Build sort object
-  let sortObj: any = sort == "accending" ? { createdAt: 1 } : { createdAt: -1 };
 
-  // Fetch flashcards
-  const flashcards = await FlashcardModel.find(query)
-    .skip(skip)
-    .limit(pageLimit)
-    .sort(sortObj);
+  // Facet for total + paginated results
+  pipeline.push({
+    $facet: {
+      meta: [{ $count: "total" }],
+      data: [
+        { $sort: sortObj },
+        { $skip: skip },
+        { $limit: pageLimit }
+      ]
+    }
+  });
 
-  //calculate total flashcards document
-  const totalFlashcards = await FlashcardModel.countDocuments(query);
-  let meta = {
+  const result = await FlashcardModel.aggregate(pipeline);
+
+  if (!result || !result[0] || result[0].data.length === 0) {
+    throw new CustomError(404, "Flashcards not found");
+  }
+
+  const flashcards = result[0].data;
+  const totalFlashcards = result[0].meta[0]?.total || 0;
+
+  const meta = {
     page: currentPage,
     limit: pageLimit,
     total: totalFlashcards,
     pages: Math.ceil(totalFlashcards / pageLimit),
-  }
-
-  if (!flashcards || flashcards.length === 0) {
-    throw new CustomError(404, "Flashcards not found");
-  }
+  };
 
   return { flashcards, meta };
 };
+
+
 
 //update flashcard
 const updateFlashcard = async (
