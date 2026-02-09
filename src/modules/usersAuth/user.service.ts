@@ -7,6 +7,7 @@ import config from "../../config";
 import { uploadCloudinary } from "../../helpers/cloudinary";
 import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
+import { redisTokenService } from "../../helpers/redisTokenService";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
@@ -104,6 +105,7 @@ export const userService = {
     email: string,
     currentPassword: string,
     newPassword: string,
+    accessToken?: string,
   ) {
     const user = await userModel.findOne({ email });
 
@@ -112,16 +114,40 @@ export const userService = {
     }
 
     await user.changePassword(currentPassword, newPassword);
+
+    // Revoke all sessions
+    user.refreshToken = "";
     await user.save();
+
+    // ✅ Blacklist current access token
+    if (accessToken) {
+      try {
+        await redisTokenService.blacklistToken(accessToken);
+      } catch (error) {
+        console.error("Failed to blacklist token:", error);
+      }
+    }
 
     return true;
   },
-  async logout(email: string) {
+
+  async logout(email: string, accessToken?: string) {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "Email not found");
 
+    // Clear refresh token from database
     user.refreshToken = "";
     await user.save();
+
+    // ✅ NEW: Blacklist the access token if provided
+    if (accessToken) {
+      try {
+        await redisTokenService.blacklistToken(accessToken);
+      } catch (error) {
+        console.error("Failed to blacklist token:", error);
+        // Don't throw error - logout should still succeed
+      }
+    }
   },
 
   async forgetPassword(email: string) {

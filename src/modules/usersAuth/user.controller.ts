@@ -99,11 +99,19 @@ export const updateUser = asyncHandler(async (req, res) => {
 export const updatePassword = asyncHandler(async (req, res) => {
   const currentEmail = req?.user?.email as string;
 
+  // Get access token
+  const accessToken =
+    req.cookies?.accessToken || req.headers?.authorization?.split("Bearer ")[1];
+
   await userService.changePassword(
     currentEmail,
     req.body.currentPassword,
     req.body.newPassword,
+    accessToken,
   );
+
+  res.clearCookie("refreshToken");
+  res.clearCookie("accessToken");
 
   ApiResponse.sendSuccess(
     res,
@@ -115,7 +123,11 @@ export const updatePassword = asyncHandler(async (req, res) => {
   );
 });
 export const logout = asyncHandler(async (req, res) => {
-  await userService.logout(req.body.email);
+  // Get access token from cookies or headers
+  const accessToken =
+    req.cookies?.accessToken || req.headers?.authorization?.split("Bearer ")[1];
+
+  await userService.logout(req.body.email, accessToken);
 
   res.clearCookie("refreshToken");
   res.clearCookie("accessToken");
