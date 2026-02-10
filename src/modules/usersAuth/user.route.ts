@@ -69,6 +69,6 @@ router.patch(
   validateRequest(changePasswordSchema),
   updatePassword,
 );
-router.route("/verify-email").post(authGuard, verifyEmail);
+router.route("/verify-email").post(verifyEmail);
 
 export const userRoute = router;

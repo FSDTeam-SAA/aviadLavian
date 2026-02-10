@@ -14,11 +14,12 @@ import { userService } from "./user.service";
 
 export const registration = asyncHandler(async (req, res) => {
   const user = await userService.registerUser(req.body);
-
+  console.log("from 17", user.verificationOtp);
   const verificationTemplate = accountVerifyTemplate(
     user.name,
     user.verificationOtp,
   );
+  console.log("verificationTemplate", verificationTemplate);
 
   setImmediate(async () => {
     await mailer({
@@ -35,10 +36,7 @@ export const registration = asyncHandler(async (req, res) => {
 });
 
 export const verifyEmail = asyncHandler(async (req, res) => {
-  const user = await userService.verifyEmail(
-    req?.user?.email as string,
-    req.body.otp,
-  );
+  const user = await userService.verifyEmail(req.body.email, req.body.otp);
 
   ApiResponse.sendSuccess(res, 200, "Email verified", {
     email: user.email,
