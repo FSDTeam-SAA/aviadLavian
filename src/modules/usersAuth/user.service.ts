@@ -7,18 +7,29 @@ import config from "../../config";
 import { uploadCloudinary } from "../../helpers/cloudinary";
 import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
-import { redisTokenService } from "../../helpers/redisTokenService";
+// import { redisTokenService } from "../../helpers/redisTokenService";
+import { emailValidator } from "../../helpers/emailValidator";
+import { generateOTP } from "../../utils/otpGenerator";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
     if (payload.role === "admin")
       throw new CustomError(400, "Admin role is reserved");
+    if (payload.email) {
+      emailValidator(payload.email);
+    }
 
     const adminEmails = config.adminEmails;
     console.log(adminEmails);
     const role = adminEmails.includes(payload.email!) ? "admin" : "user";
+    const getOtp = generateOTP();
+    const otp = Number(getOtp);
     // const role = "user";
-    const user = await userModel.create({ ...payload, role: role });
+    const user = await userModel.create({
+      ...payload,
+      role: role,
+      verificationOtp: otp as number,
+    });
 
     return user;
   },
@@ -121,11 +132,11 @@ export const userService = {
 
     // ✅ Blacklist current access token
     if (accessToken) {
-      try {
-        await redisTokenService.blacklistToken(accessToken);
-      } catch (error) {
-        console.error("Failed to blacklist token:", error);
-      }
+      // try {
+      //   await redisTokenService.blacklistToken(accessToken);
+      // } catch (error) {
+      //   console.error("Failed to blacklist token:", error);
+      // }
     }
 
     return true;
@@ -142,7 +153,7 @@ export const userService = {
     // ✅ NEW: Blacklist the access token if provided
     if (accessToken) {
       try {
-        await redisTokenService.blacklistToken(accessToken);
+        // await redisTokenService.blacklistToken(accessToken);
       } catch (error) {
         console.error("Failed to blacklist token:", error);
         // Don't throw error - logout should still succeed
