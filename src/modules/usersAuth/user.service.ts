@@ -8,11 +8,16 @@ import { uploadCloudinary } from "../../helpers/cloudinary";
 import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
 import { redisTokenService } from "../../helpers/redisTokenService";
+import { emailValidator } from "../../helpers/emailValidator";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
     if (payload.role === "admin")
       throw new CustomError(400, "Admin role is reserved");
+    if (payload.email) {
+      emailValidator.validateNotDisposable(payload.email);
+      
+    }
 
     const adminEmails = config.adminEmails;
     console.log(adminEmails);

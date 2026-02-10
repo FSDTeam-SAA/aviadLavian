@@ -30,8 +30,9 @@
     "@types/nodemailer": "^7.0.4",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.8.0",
-    "ioredis": "^5.9.2",
     "csv-parse": "^6.1.0",
+    "disposable-email-domains": "^1.0.62",
+    "ioredis": "^5.9.2",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "nodemon": "^3.1.11",
@@ -44,6 +45,7 @@
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
+    "@types/disposable-email-domains": "^1.0.6",
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.0.3",
