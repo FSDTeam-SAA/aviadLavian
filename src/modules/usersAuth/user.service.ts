@@ -151,14 +151,16 @@ export const userService = {
     await user.save();
 
     // ✅ NEW: Blacklist the access token if provided
-    if (accessToken) {
-      try {
-        // await redisTokenService.blacklistToken(accessToken);
-      } catch (error) {
-        console.error("Failed to blacklist token:", error);
-        // Don't throw error - logout should still succeed
-      }
-    }
+
+    //TODO: Blacklist the access token is disable for now, but it should be enabled when deployed
+    // if (accessToken) {
+    //   try {
+    //     // await redisTokenService.blacklistToken(accessToken);
+    //   } catch (error) {
+    //     console.error("Failed to blacklist token:", error);
+    //     // Don't throw error - logout should still succeed
+    //   }
+    // }
   },
 
   async forgetPassword(email: string) {
