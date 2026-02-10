@@ -9,21 +9,27 @@ import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
 import { redisTokenService } from "../../helpers/redisTokenService";
 import { emailValidator } from "../../helpers/emailValidator";
+import { generateOTP } from "../../utils/otpGenerator";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
     if (payload.role === "admin")
       throw new CustomError(400, "Admin role is reserved");
     if (payload.email) {
-      emailValidator.validateNotDisposable(payload.email);
-      
+      emailValidator(payload.email);
     }
 
     const adminEmails = config.adminEmails;
     console.log(adminEmails);
     const role = adminEmails.includes(payload.email!) ? "admin" : "user";
+    const getOtp = generateOTP();
+    const otp = Number(getOtp);
     // const role = "user";
-    const user = await userModel.create({ ...payload, role: role });
+    const user = await userModel.create({
+      ...payload,
+      role: role,
+      verificationOtp: otp as number,
+    });
 
     return user;
   },
