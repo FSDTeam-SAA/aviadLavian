@@ -7,7 +7,7 @@ import config from "../../config";
 import { uploadCloudinary } from "../../helpers/cloudinary";
 import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
-import { redisTokenService } from "../../helpers/redisTokenService";
+// import { redisTokenService } from "../../helpers/redisTokenService";
 import { emailValidator } from "../../helpers/emailValidator";
 import { generateOTP } from "../../utils/otpGenerator";
 
@@ -132,11 +132,11 @@ export const userService = {
 
     // ✅ Blacklist current access token
     if (accessToken) {
-      try {
-        await redisTokenService.blacklistToken(accessToken);
-      } catch (error) {
-        console.error("Failed to blacklist token:", error);
-      }
+      // try {
+      //   await redisTokenService.blacklistToken(accessToken);
+      // } catch (error) {
+      //   console.error("Failed to blacklist token:", error);
+      // }
     }
 
     return true;
@@ -153,7 +153,7 @@ export const userService = {
     // ✅ NEW: Blacklist the access token if provided
     if (accessToken) {
       try {
-        await redisTokenService.blacklistToken(accessToken);
+        // await redisTokenService.blacklistToken(accessToken);
       } catch (error) {
         console.error("Failed to blacklist token:", error);
         // Don't throw error - logout should still succeed
