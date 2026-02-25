@@ -28,7 +28,7 @@ export const uploadCloudinary = async (
     }
 
     const cloudinaryResponse = await cloudinary.uploader.upload(filePath, {
-      resource_type: "image",
+      resource_type: "auto",
       quality: "auto",
     });
 
@@ -59,8 +59,7 @@ export const deleteCloudinary = async (publicId: string): Promise<unknown> => {
   } catch (error: any) {
     throw new CustomError(
       500,
-      `Failed to delete image from Cloudinary: ${
-        error?.message ?? "Unknown error"
+      `Failed to delete image from Cloudinary: ${error?.message ?? "Unknown error"
       }`
     );
   }
