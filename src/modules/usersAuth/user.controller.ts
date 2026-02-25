@@ -137,8 +137,9 @@ export const logout = asyncHandler(async (req, res) => {
 export const forgetPassword = asyncHandler(async (req, res) => {
   const { resetToken, user } = await userService.forgetPassword(req.body.email);
 
-  const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
-
+  // const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
+  
+  const resetUrl = `http://localhost:5000/api/v1/reset-password?token=${resetToken}`;
   await mailer({
     email: user.email,
     subject: "Reset your password",
