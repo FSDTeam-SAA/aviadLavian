@@ -72,7 +72,8 @@ export const userService = {
 
     let emailChanged = false;
 
-    if (payload.name) user.name = payload.name;
+    if (payload.FirstName) user.FirstName = payload.FirstName;
+    if (payload.LastName) user.LastName = payload.LastName;
     if (payload.profession) user.profession = payload.profession;
     if (payload.country) user.country = payload.country;
 
@@ -104,7 +105,7 @@ export const userService = {
 
     return {
       user: {
-        name: user.name,
+        name: user.FirstName + " " + user.LastName,
         email: user.email,
         profileImage: user.profileImage,
       },

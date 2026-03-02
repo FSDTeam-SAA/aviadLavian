@@ -7,19 +7,13 @@ import { IUser, role, status } from "./user.interface";
 
 const userSchema = new Schema<IUser>(
   {
-    name: {
-      FirstName: {
-        type: String,
-        required: true,
-      },
-      LastName: {
-        type: String,
-        required: true,
-      },
-      fullName: {
-        type: String,
-      },
-
+    FirstName: {
+      type: String,
+      required: true,
+    },
+    LastName: {
+      type: String,
+      required: true,
     },
     email: {
       type: String,
@@ -121,10 +115,6 @@ userSchema.pre<IUser>("save", async function () {
   }
 });
 
-// Set full name with pre middleware
-userSchema.pre<IUser>("save", function (next) {
-  this.name.fullName = `${this.name.FirstName} ${this.name.LastName}`;
-});
 
 // encrypt password in pre middleware
 userSchema.pre<IUser & Document>("save", async function () {
