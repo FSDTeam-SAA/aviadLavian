@@ -16,10 +16,9 @@ export const registration = asyncHandler(async (req, res) => {
   const user = await userService.registerUser(req.body);
   console.log("from 17", user.verificationOtp);
   const verificationTemplate = accountVerifyTemplate(
-    user.name,
+    user.name.FirstName,
     user.verificationOtp,
   );
-  console.log("verificationTemplate", verificationTemplate);
 
   setImmediate(async () => {
     await mailer({
@@ -143,7 +142,7 @@ export const forgetPassword = asyncHandler(async (req, res) => {
   await mailer({
     email: user.email,
     subject: "Reset your password",
-    template: resetPasswordLinkTemplate(user.name, resetUrl),
+    template: resetPasswordLinkTemplate(user.name.FirstName, resetUrl),
   });
 
   ApiResponse.sendSuccess(res, 200, "Reset link sent to email", {});
