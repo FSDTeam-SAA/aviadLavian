@@ -8,8 +8,18 @@ import { IUser, role, status } from "./user.interface";
 const userSchema = new Schema<IUser>(
   {
     name: {
-      type: String,
-      required: true,
+      FirstName: {
+        type: String,
+        required: true,
+      },
+      LastName: {
+        type: String,
+        required: true,
+      },
+      fullName: {
+        type: String,
+      },
+
     },
     email: {
       type: String,
@@ -31,7 +41,7 @@ const userSchema = new Schema<IUser>(
     },
     country: {
       type: String,
-      required: true,
+      required: false,
     },
     addressIds: [
       {
@@ -109,6 +119,11 @@ userSchema.pre<IUser>("save", async function () {
   if (existingUser && existingUser._id.toString() !== this._id.toString()) {
     throw new CustomError(409, "Email already exists");
   }
+});
+
+// Set full name with pre middleware
+userSchema.pre<IUser>("save", function (next) {
+  this.name.fullName = `${this.name.FirstName} ${this.name.LastName}`;
 });
 
 // encrypt password in pre middleware
