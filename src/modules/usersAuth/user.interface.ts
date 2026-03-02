@@ -16,7 +16,11 @@ export interface UpdateUserPayload {
 }
 export interface IUser extends Document {
   _id: string;
-  name: string;
+  name: {
+    FirstName: string;
+    LastName: string;
+    fullName?: string;
+  };
   email: string;
   password: string;
   role: string;
