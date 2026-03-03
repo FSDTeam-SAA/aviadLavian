@@ -6,7 +6,7 @@ export interface IOption {
   isCorrect: boolean;
 }
 export interface IQuestion {
-  subTopicId: Types.ObjectId;
+  articleId: Types.ObjectId;
   questionText: string;
   options: IOption[];
   explanation: string;

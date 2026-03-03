@@ -30,7 +30,22 @@ export const updateQuestion = asyncHandler(async (req, res) => {
   );
   ApiResponse.sendSuccess(res, 200, "Question updated", question);
 });
+export const updateQuestionOption = asyncHandler(async (req, res) => {
+  const { questionId, optionId } = req.params;
 
+  const updatedQuestion = await questionService.updateSingleOption(
+    questionId as string,
+    optionId as string,
+    req.body,
+  );
+
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Option updated successfully",
+    updatedQuestion,
+  );
+});
 export const deleteQuestion = asyncHandler(async (req, res) => {
   const question = await questionService.deleteQuestion(
     req.params.id as string,

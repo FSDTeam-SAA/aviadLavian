@@ -1,7 +1,7 @@
 import { Schema, model, CallbackError } from "mongoose";
-import { IQuestion } from "./question.interface";
+import { IOption, IQuestion } from "./question.interface";
 
-const optionSchema = new Schema(
+const optionSchema = new Schema<IOption>(
   {
     text: { type: String, required: true },
     isCorrect: { type: Boolean, required: true },
@@ -11,9 +11,9 @@ const optionSchema = new Schema(
 
 const questionSchema = new Schema<IQuestion>(
   {
-    subTopicId: {
+    articleId: {
       type: Schema.Types.ObjectId,
-      ref: "SubTopic",
+      ref: "Article",
       required: true,
     },
     questionText: { type: String, required: true },
@@ -36,7 +36,7 @@ const questionSchema = new Schema<IQuestion>(
 questionSchema.pre("save", async function () {
   if (this.isNew || this.isModified("questionText")) {
     const duplicate = await QuestionModel.findOne({
-      subTopicId: this.subTopicId,
+      articleId: this.articleId,
       questionText: this.questionText,
       _id: { $ne: this._id },
       isDeleted: false,
@@ -49,7 +49,7 @@ questionSchema.pre("save", async function () {
     }
   }
 
-  // Check for duplicate options within the same question
+  // 🔥 Duplicate option text check
   if (this.isModified("options")) {
     const optionTexts = this.options.map((opt) =>
       opt.text.toLowerCase().trim(),
@@ -59,44 +59,81 @@ questionSchema.pre("save", async function () {
     if (optionTexts.length !== uniqueOptions.size) {
       throw new Error("Duplicate options are not allowed in a question");
     }
+
+    // ✅ Ensure only one correct answer
+    const correctOptionsCount = this.options.filter(
+      (opt) => opt.isCorrect === true,
+    ).length;
+
+    if (correctOptionsCount > 1) {
+      throw new Error("Only one option can be marked as correct in a question");
+    }
   }
 });
 
 // Middleware for findOneAndUpdate
 questionSchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
+  const filter = this.getFilter() as any;
 
-  // Check for duplicate question text if updating
+  const currentDoc = await QuestionModel.findOne(filter);
+  if (!currentDoc) return;
+
+  // 🔥 Question text duplicate check
   if (update.questionText) {
-    const filter = this.getFilter() as any;
-    const currentDoc = await QuestionModel.findOne(filter);
+    const duplicate = await QuestionModel.findOne({
+      articleId: update.articleId || currentDoc.articleId,
+      questionText: update.questionText,
+      _id: { $ne: currentDoc._id },
+      isDeleted: false,
+    });
 
-    if (currentDoc) {
-      const duplicate = await QuestionModel.findOne({
-        subTopicId: update.subTopicId || currentDoc.subTopicId,
-        questionText: update.questionText,
-        _id: { $ne: currentDoc._id },
-        isDeleted: false,
-      });
-
-      if (duplicate) {
-        throw new Error(
-          "A question with this text already exists under this subtopic",
-        );
-      }
+    if (duplicate) {
+      throw new Error(
+        "A question with this text already exists under this subtopic",
+      );
     }
   }
 
-  // Check for duplicate options if updating options
-  if (update.options || update.$set?.options) {
-    const options = update.options || update.$set?.options;
-    const optionTexts = options.map((opt: any) =>
+  // 🔥 If full options array is being updated
+  const newOptions = update.options || update.$set?.options;
+
+  if (newOptions) {
+    const optionTexts = newOptions.map((opt: any) =>
       opt.text.toLowerCase().trim(),
     );
+
     const uniqueOptions = new Set(optionTexts);
 
     if (optionTexts.length !== uniqueOptions.size) {
       throw new Error("Duplicate options are not allowed in a question");
+    }
+
+    const correctOptionsCount = newOptions.filter(
+      (opt: any) => opt.isCorrect === true,
+    ).length;
+
+    if (correctOptionsCount > 1) {
+      throw new Error("Only one option can be marked as correct in a question");
+    }
+  }
+
+  // 🔥 If single option is being updated using positional operator
+  if (update.$set) {
+    const isSettingCorrect = Object.keys(update.$set).some((key) =>
+      key.includes("isCorrect"),
+    );
+
+    if (isSettingCorrect && update.$set["options.$.isCorrect"] === true) {
+      const alreadyCorrect = currentDoc.options.some(
+        (opt: any) => opt.isCorrect === true,
+      );
+
+      if (alreadyCorrect) {
+        throw new Error(
+          "Only one option can be marked as correct in a question",
+        );
+      }
     }
   }
 });

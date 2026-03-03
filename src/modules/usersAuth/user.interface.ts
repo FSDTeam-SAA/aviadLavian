@@ -9,7 +9,10 @@ export enum status {
   blocked = "blocked",
 }
 export interface UpdateUserPayload {
-  name?: string;
+  name?: {
+    FirstName?: string;
+    LastName?: string;
+  };
   email?: string;
   profession?: string;
   country?: string;
@@ -53,6 +56,6 @@ export interface IUser extends Document {
   createRefreshToken: () => string;
   changePassword(
     currentPassword: string,
-    newPassword: string,  
+    newPassword: string,
   ): Promise<boolean>;
 }

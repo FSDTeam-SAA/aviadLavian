@@ -1,6 +1,6 @@
 export const forgotPasswordOtpTemplate = (
   name: string,
-  otp: string,
+  otp: number,
 ): string => {
   return `
 <!DOCTYPE html>

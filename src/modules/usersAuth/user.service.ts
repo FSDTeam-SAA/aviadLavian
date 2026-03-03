@@ -10,6 +10,8 @@ import bcryptjs from "bcryptjs";
 // import { redisTokenService } from "../../helpers/redisTokenService";
 import { emailValidator } from "../../helpers/emailValidator";
 import { generateOTP } from "../../utils/otpGenerator";
+import { mailer } from "../../helpers/nodeMailer";
+import { forgotPasswordOtpTemplate } from "../../tempaletes/auth.templates";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
@@ -72,7 +74,12 @@ export const userService = {
 
     let emailChanged = false;
 
-    if (payload.name) user.name = payload.name;
+    if (payload?.name?.FirstName) {
+      user.name.FirstName = payload.name.FirstName;
+    }
+    if (payload?.name?.LastName) {
+      user.name.LastName = payload.name.LastName;
+    }
     if (payload.profession) user.profession = payload.profession;
     if (payload.country) user.country = payload.country;
 
@@ -167,42 +174,62 @@ export const userService = {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "User not found");
 
-    // generate random token
+    // 1️⃣ Token generate
     const resetToken = crypto.randomBytes(32).toString("hex");
-
-    // hash token before saving
     const hashedToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
+    // 2️⃣ OTP generate
+    const otp = Number(generateOTP()); // apnar existing OTP function
+
+    // 3️⃣ Save token + OTP + expiry in user
+    const expireTime = new Date(Date.now() + 10 * 60 * 1000); // 10 min
     user.passwordResetToken = hashedToken;
-    user.passwordResetExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    user.passwordResetExpire = expireTime;
+    user.forgetPasswordOtp = otp;
+    user.frogetPasswordOtpExpire = expireTime;
 
     await user.save({ validateBeforeSave: false });
 
-    return {
-      resetToken, // 👉 only send plain token via email
-      user,
-    };
+    // 4️⃣ Send OTP via email
+    const resetTemplate = forgotPasswordOtpTemplate(
+      user.name?.fullName || "",
+      otp,
+    );
+    setImmediate(async () => {
+      await mailer({
+        email: user.email,
+        subject: "Password Reset OTP",
+        template: resetTemplate,
+      });
+    });
+
+    // 5️⃣ Return token for link
+    return { resetToken, user };
   },
-  async resetPassword(token: string, newPassword: string) {
+  async resetPassword(token: string, otp: number, newPassword: string) {
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
     const user = await userModel.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpire: { $gt: Date.now() },
+      passwordResetOtp: otp,
+      passwordResetOtpExpire: { $gt: Date.now() },
     });
 
-    if (!user) throw new CustomError(400, "Token invalid or expired");
+    if (!user) throw new CustomError(400, "Token or OTP invalid/expired");
 
+    // Password reset
     user.password = newPassword;
     user.passwordResetToken = "";
     user.passwordResetExpire = null;
-    user.refreshToken = ""; // revoke all sessions
+    user.forgetPasswordOtp = null;
+    user.frogetPasswordOtpExpire = null;
+    user.refreshToken = ""; // sob session revoke
 
     await user.save();
-
     return true;
   },
   async generateAccessToken(refreshToken: string) {
