@@ -9,21 +9,16 @@ export enum status {
   blocked = "blocked",
 }
 export interface UpdateUserPayload {
-  name?: {
-    FirstName?: string;
-    LastName?: string;
-  };
+  FirstName?: string;
+  LastName?: string;
   email?: string;
   profession?: string;
   country?: string;
 }
 export interface IUser extends Document {
   _id: string;
-  name: {
-    FirstName: string;
-    LastName: string;
-    fullName?: string;
-  };
+  FirstName: string;
+  LastName: string;
   email: string;
   password: string;
   role: string;

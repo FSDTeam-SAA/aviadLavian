@@ -16,7 +16,7 @@ export const registration = asyncHandler(async (req, res) => {
   const user = await userService.registerUser(req.body);
   console.log("from 17", user.verificationOtp);
   const verificationTemplate = accountVerifyTemplate(
-    user.name.FirstName,
+    user.FirstName,
     user.verificationOtp,
   );
 
@@ -39,7 +39,7 @@ export const verifyEmail = asyncHandler(async (req, res) => {
 
   ApiResponse.sendSuccess(res, 200, "Email verified", {
     email: user.email,
-    name: user.name,
+    name: `${user.FirstName} ${user.LastName}`,
   });
 });
 
@@ -64,7 +64,7 @@ export const login = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "Logged in", {
     email: user.email,
     role: user.role,
-    name: user.name,
+    name: `${user.FirstName} ${user.LastName}`,
     accessToken,
     refreshToken,
   });
@@ -142,7 +142,7 @@ export const forgetPassword = asyncHandler(async (req, res) => {
   await mailer({
     email: user.email,
     subject: "Reset your password",
-    template: resetPasswordLinkTemplate(user.name.FirstName, resetUrl),
+    template: resetPasswordLinkTemplate(user.FirstName, resetUrl),
   });
 
   ApiResponse.sendSuccess(res, 200, "Reset link sent to email", {});

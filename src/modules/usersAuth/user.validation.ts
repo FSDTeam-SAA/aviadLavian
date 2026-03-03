@@ -2,17 +2,14 @@ import { z } from "zod";
 
 export const registerUserSchema = z
   .object({
-    name: z.object({
-      FirstName: z
-        .string()
-        .min(1, "First name is required")
-        .trim(),
-
-      LastName: z
-        .string()
-        .min(1, "Last name is required")
-        .trim(),
-    }),
+    FirstName: z
+      .string()
+      .min(1, "First name is required")
+      .trim(),
+    LastName: z
+      .string()
+      .min(1, "Last name is required")
+      .trim(),
     email: z.email("Invalid email address"),
     password: z
       .string()
