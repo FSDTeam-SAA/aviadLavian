@@ -24,10 +24,12 @@ const flashcardSchema = new Schema<IFlashcard>({
       required: false,
     },
   },
-  topicId: [{
+  topicId:
+  {
     type: String,
     required: true,
-  }],
+  }
+  ,
   difficulty: {
     type: String,
     required: true,

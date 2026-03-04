@@ -13,6 +13,14 @@ export const createFlashcard = asyncHandler(async (req: Request, res: Response) 
   ApiResponse.sendSuccess(res, 201, "Flashcard created successfully", flashcard);
 });
 
+
+//get flashcard by injuryId
+export const getFlashcardByInjuryId = asyncHandler(async (req: Request, res: Response) => {
+  const { injuryId } = req.params;
+  const flashcard = await flashcardService.getFlashcardByInjuryId(injuryId as string);
+  ApiResponse.sendSuccess(res, 200, "Flashcard found", flashcard);
+});
+
 //get single flashcard
 export const getFlashcard = asyncHandler(async (req: Request, res: Response) => {
   const { flashcardId } = req.params;
