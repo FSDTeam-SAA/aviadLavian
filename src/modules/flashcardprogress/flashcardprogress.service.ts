@@ -113,6 +113,14 @@ const reviewFlashcard = async (
   };
 };
 
+
+// Get all flashcard progress for a user
+const getFlashcardProgress = async (userId: string) => {
+  const progressList = await FlashcardProgressModel.find({ userId }).populate("flashcardId");
+  return progressList;
+};
+
 export const flashcardprogressService = {
   reviewFlashcard,
+  getFlashcardProgress,
 };
