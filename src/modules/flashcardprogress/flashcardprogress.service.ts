@@ -102,6 +102,7 @@ const reviewFlashcard = async (
   progress.lastQuality = quality;
   progress.lastReviewedAt = now;
   progress.nextReviewAt = nextReviewAt;
+  progress.userAnswer = result;
 
   await progress.save();
 

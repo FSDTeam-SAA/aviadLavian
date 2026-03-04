@@ -23,57 +23,22 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
   return flashcard;
 };
 
+//create flashcard from injury
+const getFlashcardByInjuryId = async (injuryId: string) => {
+  const flashcard = await FlashcardModel.find({ topicId: injuryId, isActive: true });
+  if (!flashcard) throw new CustomError(404, "Flashcard not found");
+  console.log(flashcard);
+
+  return flashcard;
+}
+
 //get single flashcard
 const getSingleFlashcard = async (id: string) => {
-  if (!Types.ObjectId.isValid(id)) {
-    throw new CustomError(400, "Invalid flashcard id");
-  }
-
-  const result = await FlashcardModel.aggregate([
-    {
-      $match: {
-        _id: new Types.ObjectId(id),
-        isActive: true,
-      },
-    },
-
-    // ✅ Populate topicId (stored as string[] of Injury _id)
-    {
-      $lookup: {
-        from: "injuries",
-        let: {
-          topicIds: {
-            $map: {
-              input: "$topicId",
-              as: "t",
-              in: { $toObjectId: "$$t" }, // convert string -> ObjectId
-            },
-          },
-        },
-        pipeline: [
-          {
-            $match: {
-              $expr: { $in: ["$_id", "$$topicIds"] },
-            },
-          },
-          {
-            $project: {
-              __v: 0,
-              createdAt: 0,
-              updatedAt: 0,
-            },
-          },
-        ],
-        as: "topicId",
-      },
-    },
-  ]);
-
-  const flashcard = result?.[0];
+  const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true });
   if (!flashcard) throw new CustomError(404, "Flashcard not found");
 
   return flashcard;
-};
+}
 
 //get all flashcards
 const getAllFlashcards = async (
@@ -94,16 +59,13 @@ const getAllFlashcards = async (
     match.isActive = true;
   }
 
-  // Search filter
+  // Search filter (topicId is SINGLE ObjectId string now)
   if (topicId) {
-    // if topicId is a valid ObjectId string -> filter by topicId array
-    if (Types.ObjectId.isValid(topicId)) {
-      match.topicId = { $in: [topicId] }; // topicId stored as string[] of injury _id
-    } else {
-      // otherwise keep your text search behavior on question
-      const regex = new RegExp(topicId, "i");
-      match.question = regex;
-    }
+    const regex = new RegExp(topicId, "i");
+    match.$or = [
+      { question: regex },
+      { topicId: regex }, // ✅ topicId is string/ObjectId string, not array
+    ];
   }
 
   const sortObj: any = sort === "accending" ? { createdAt: 1 } : { createdAt: -1 };
@@ -111,36 +73,28 @@ const getAllFlashcards = async (
   const pipeline: any[] = [
     { $match: match },
 
-    // ✅ Populate topicId (string[] of Injury _id) -> topicId (Injury[])
+    // ✅ Populate topicId (single) -> Injury object
     {
       $lookup: {
         from: "injuries",
         let: {
-          topicIds: {
-            $map: {
-              input: "$topicId",
-              as: "t",
-              in: { $toObjectId: "$$t" }, // convert string -> ObjectId
-            },
+          topicIdObj: {
+            $cond: [
+              { $eq: [{ $type: "$topicId" }, "objectId"] },
+              "$topicId",
+              { $toObjectId: "$topicId" }, // if stored as string
+            ],
           },
         },
         pipeline: [
-          {
-            $match: {
-              $expr: { $in: ["$_id", "$$topicIds"] },
-            },
-          },
-          {
-            $project: {
-              __v: 0,
-              createdAt: 0,
-              updatedAt: 0,
-            },
-          },
+          { $match: { $expr: { $eq: ["$_id", "$$topicIdObj"] } } },
+          { $project: { __v: 0, createdAt: 0, updatedAt: 0 } },
         ],
         as: "topicId",
       },
     },
+    // topicId becomes single object instead of array
+    { $addFields: { topicId: { $arrayElemAt: ["$topicId", 0] } } },
   ];
 
   if (userId) {
@@ -165,9 +119,7 @@ const getAllFlashcards = async (
           as: "progress",
         },
       },
-      {
-        $addFields: { progress: { $arrayElemAt: ["$progress", 0] } },
-      },
+      { $addFields: { progress: { $arrayElemAt: ["$progress", 0] } } },
       {
         $match: {
           $or: [{ "progress.nextReviewAt": { $lte: now } }, { progress: { $eq: null } }],
@@ -226,24 +178,29 @@ const updateFlashcard = async (
     updateQuery.isActive = data.isActive === "true";
   }
 
-  // Add topicId (no duplicates)
-  if (Array.isArray(data.addTopicId) && data.addTopicId.length > 0) {
-    updateQuery.$addToSet = {
-      ...(updateQuery.$addToSet || {}),
-      topicId: { $each: data.addTopicId },
-    };
+  // ✅ topicId is SINGLE now (replace it)
+  // accept either `data.topicId` or your existing `data.addTopicId[0]`
+  if (data.topicId) {
+    if (!Types.ObjectId.isValid(data.topicId)) {
+      throw new CustomError(400, "Invalid topicId");
+    }
+    updateQuery.topicId = data.topicId;
+  } else if (Array.isArray(data.addTopicId) && data.addTopicId.length > 0) {
+    const nextTopicId = data.addTopicId[0];
+    if (!Types.ObjectId.isValid(nextTopicId)) {
+      throw new CustomError(400, "Invalid addTopicId");
+    }
+    updateQuery.topicId = nextTopicId;
   }
 
-  // Remove topicId
+  // If someone sends removeTopicId for single field, allow clearing (optional)
   if (Array.isArray(data.removeTopicId) && data.removeTopicId.length > 0) {
-    updateQuery.$pull = {
-      ...(updateQuery.$pull || {}),
-      topicId: { $in: data.removeTopicId },
-    };
+    // only clear if current topicId is in remove list
+    updateQuery.topicId = null;
   }
 
   // Update + ✅ populate topicId
-  const flashcard = await FlashcardModel.findByIdAndUpdate(id, updateQuery, {
+  let flashcard = await FlashcardModel.findByIdAndUpdate(id, updateQuery, {
     new: true,
   }).populate({
     path: "topicId",
@@ -266,16 +223,16 @@ const updateFlashcard = async (
       flashcard.image = uploaded;
       await flashcard.save();
     }
+
+    // re-populate after save (because save returns doc without re-populate sometimes)
+    flashcard = await FlashcardModel.findById(flashcard._id).populate({
+      path: "topicId",
+      model: "Injury",
+      select: "-__v -createdAt -updatedAt",
+    });
   }
 
-  // (optional) if image was saved after, re-populate again to ensure response is populated
-  const populated = await FlashcardModel.findById(flashcard._id).populate({
-    path: "topicId",
-    model: "Injury",
-    select: "-__v -createdAt -updatedAt",
-  });
-
-  return populated;
+  return flashcard;
 };
 
 //delete flashcard
@@ -291,4 +248,4 @@ const deleteFlashcard = async (id: string) => {
 }
 
 
-export const flashcardService = { createFlashcard, getSingleFlashcard, getAllFlashcards, updateFlashcard, deleteFlashcard };
+export const flashcardService = { createFlashcard, getFlashcardByInjuryId, getSingleFlashcard, getAllFlashcards, updateFlashcard, deleteFlashcard };
