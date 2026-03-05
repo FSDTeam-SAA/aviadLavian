@@ -1,16 +1,31 @@
 import { QuestionModel } from "./question.model";
 import CustomError from "../../helpers/CustomError";
-import { IQuestion } from "./question.interface";
+import { IQuestion, IUpdateQuestion } from "./question.interface";
 
 const createQuestion = async (payload: Partial<IQuestion>) => {
-  return await QuestionModel.create(payload);
+  try {
+    return await QuestionModel.create(payload);
+  } catch (error: any) {
+    if (error.code === 11000) {
+      throw new CustomError(
+        400,
+        "A question with this text already exists under this article",
+      );
+    }
+    throw error;
+  }
 };
 
-const getAllQuestions = async () => {
-  return await QuestionModel.find({ isDeleted: false }).populate(
-    "articleId",
-    "name",
-  );
+const getAllQuestions = async (query: any) => {
+  const filter: any = { isDeleted: false };
+
+  if (query.articleId) filter.articleId = query.articleId;
+  if (query.difficulty) filter.difficulty = query.difficulty;
+  if (query.isHidden !== undefined) filter.isHidden = query.isHidden === "true";
+
+  return await QuestionModel.find(filter)
+    .populate("articleId", "name")
+    .sort({ createdAt: -1 });
 };
 
 const getQuestionById = async (id: string) => {
@@ -22,12 +37,25 @@ const getQuestionById = async (id: string) => {
   return question;
 };
 
-const updateQuestion = async (id: string, payload: Partial<IQuestion>) => {
-  const question = await QuestionModel.findByIdAndUpdate(id, payload, {
+const updateQuestion = async (
+  id: string,
+  payload: Partial<IUpdateQuestion>,
+) => {
+  const allowedFields = {
+    articleId: payload.articleId,
+    topicId: payload.topicId,
+    questionText: payload.questionText,
+    explanation: payload.explanation,
+    marks: payload.marks,
+    isHidden: payload.isHidden,
+    isDeleted: payload.isDeleted,
+  };
+  const question = await QuestionModel.findByIdAndUpdate(id, allowedFields, {
     new: true,
     runValidators: true,
   });
   if (!question) throw new CustomError(404, "Question not found");
+
   return question;
 };
 export const updateSingleOption = async (
@@ -49,7 +77,6 @@ export const updateSingleOption = async (
     throw new CustomError(404, "Option not found");
   }
 
-  // ✅ Unique validation
   if (payload.text) {
     const duplicate = question.options.some(
       (opt) =>
@@ -62,7 +89,13 @@ export const updateSingleOption = async (
     }
   }
 
-  // ✅ Positional update (No full document validation issue)
+  if (payload.isCorrect === true) {
+    await QuestionModel.updateOne(
+      { _id: questionId },
+      { $set: { "options.$[].isCorrect": false } },
+    );
+  }
+
   const updatedQuestion = await QuestionModel.findOneAndUpdate(
     { _id: questionId, "options._id": optionId },
     {

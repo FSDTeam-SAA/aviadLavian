@@ -1,15 +1,9 @@
-import { z } from "zod";
+import { email, z } from "zod";
 
 export const registerUserSchema = z
   .object({
-    FirstName: z
-      .string()
-      .min(1, "First name is required")
-      .trim(),
-    LastName: z
-      .string()
-      .min(1, "Last name is required")
-      .trim(),
+    FirstName: z.string().min(1, "First name is required").trim(),
+    LastName: z.string().min(1, "Last name is required").trim(),
     email: z.email("Invalid email address"),
     password: z
       .string()
@@ -48,6 +42,12 @@ export const resetPasswordSchema = z
       .string()
       .min(6, "Password must be at least 6 characters")
       .max(100, "Password too long"),
+    otp: z
+      .number()
+      .int("OTP must be a number")
+      .min(100000, "OTP must be 6 digits")
+      .max(999999, "OTP must be 6 digits"),
+    email: z.email("Invalid email"),
   })
   .strict();
 

@@ -134,25 +134,24 @@ export const logout = asyncHandler(async (req, res) => {
 
 // user.controller.ts
 export const forgetPassword = asyncHandler(async (req, res) => {
-  const { resetToken, user } = await userService.forgetPassword(req.body.email);
 
-  // const resetUrl = `${config.frontendUrl}/reset-password?token=${resetToken}`;
-  
-  const resetUrl = `http://localhost:5000/api/v1/reset-password?token=${resetToken}`;
-  await mailer({
-    email: user.email,
-    subject: "Reset your password",
-    template: resetPasswordLinkTemplate(user.FirstName, resetUrl),
-  });
+  await userService.forgetPassword(req.body.email);
 
-  ApiResponse.sendSuccess(res, 200, "Reset link sent to email", {});
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Reset OTP and link sent to your email",
+    {},
+  );
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
+  const { otp } = req.body;
+  const { email } = req.body;
 
-  await userService.resetPassword(token as string, password);
+  await userService.resetPassword(token as string, otp, password, email);
 
   ApiResponse.sendSuccess(res, 200, "Password reset successful", {});
 });

@@ -268,3 +268,33 @@ export const resetPasswordLinkTemplate = (
 </html>
 `;
 };
+
+// templates/forgotPasswordUnifiedTemplate.ts
+export const forgotPasswordUnifiedTemplate = (
+  name: string,
+  otp: number,
+  resetUrl: string,
+) => {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px;">
+      <h2 style="color: #333;">Password Reset Request</h2>
+      <p>Hello ${name},</p>
+      <p>You requested to reset your password for your Medical Education account. You can use either of the methods below:</p>
+      
+      <div style="background: #f4f4f4; padding: 15px; text-align: center; border-radius: 5px; margin: 20px 0;">
+        <h3 style="margin: 0; color: #555;">Option 1: Use OTP</h3>
+        <h1 style="letter-spacing: 5px; color: #2c3e50; margin: 10px 0;">${otp}</h1>
+        <p style="font-size: 12px; color: #888;">Expires in 10 minutes</p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <h3 style="color: #555;">Option 2: Use Reset Link (Just click on the link)</h3>
+        <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset My Password</a>
+      </div>
+
+      <p>If you didn't request this, please ignore this email.</p>
+      <hr style="border: 0; border-top: 1px solid #eee;" />
+      <p style="font-size: 11px; color: #aaa;">Team Medical Education Platform</p>
+    </div>
+  `;
+};

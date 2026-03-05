@@ -5,6 +5,7 @@ const optionSchema = new Schema<IOption>(
   {
     text: { type: String, required: true },
     isCorrect: { type: Boolean, required: true },
+    selectedCount: { type: Number, default: 0 }, // 👈
   },
   { _id: true },
 );
@@ -16,39 +17,31 @@ const questionSchema = new Schema<IQuestion>(
       ref: "Article",
       required: true,
     },
+    topicId: { type: String, required: true },
     questionText: { type: String, required: true },
     options: { type: [optionSchema], required: true },
-    explanation: { type: String },
-    difficulty: {
-      type: String,
-      enum: ["easy", "medium", "hard"],
-      required: true,
-    },
+    explanation: { type: String, required: true },
+
     marks: { type: Number, default: 1 },
+    totalAttempts: { type: Number, default: 0 },
+    correctAttempts: { type: Number, default: 0 },
     isHidden: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   { timestamps: true },
 );
+questionSchema.index({ articleId: 1, questionText: 1 }, { unique: true });
+questionSchema.index({ articleId: 1 });
+questionSchema.index({ difficulty: 1 });
+questionSchema.index({ isDeleted: 1 });
+questionSchema.index({ isHidden: 1 });
 
 // Middleware to prevent duplicate question text under same subtopic
 questionSchema.pre("save", async function () {
-  if (this.isNew || this.isModified("questionText")) {
-    const duplicate = await QuestionModel.findOne({
-      articleId: this.articleId,
-      questionText: this.questionText,
-      _id: { $ne: this._id },
-      isDeleted: false,
-    });
-
-    if (duplicate) {
-      throw new Error(
-        "A question with this text already exists under this subtopic",
-      );
-    }
+  if (this.options.length < 2) {
+    throw new Error("A question must have at least 2 options");
   }
-
   // 🔥 Duplicate option text check
   if (this.isModified("options")) {
     const optionTexts = this.options.map((opt) =>
@@ -64,9 +57,18 @@ questionSchema.pre("save", async function () {
     const correctOptionsCount = this.options.filter(
       (opt) => opt.isCorrect === true,
     ).length;
+    const falseOptionsCount = this.options.filter(
+      (opt) => opt.isCorrect === false,
+    ).length;
 
     if (correctOptionsCount > 1) {
       throw new Error("Only one option can be marked as correct in a question");
+    }
+
+    if (falseOptionsCount == this.options.length) {
+      throw new Error(
+        "At least one option must be marked as correct in a question",
+      );
     }
   }
 });
@@ -79,7 +81,6 @@ questionSchema.pre("findOneAndUpdate", async function () {
   const currentDoc = await QuestionModel.findOne(filter);
   if (!currentDoc) return;
 
-  // 🔥 Question text duplicate check
   if (update.questionText) {
     const duplicate = await QuestionModel.findOne({
       articleId: update.articleId || currentDoc.articleId,
@@ -95,18 +96,19 @@ questionSchema.pre("findOneAndUpdate", async function () {
     }
   }
 
-  // 🔥 If full options array is being updated
   const newOptions = update.options || update.$set?.options;
 
-  if (newOptions) {
+  if (newOptions && Array.isArray(newOptions)) {
     const optionTexts = newOptions.map((opt: any) =>
       opt.text.toLowerCase().trim(),
     );
 
-    const uniqueOptions = new Set(optionTexts);
-
-    if (optionTexts.length !== uniqueOptions.size) {
+    if (optionTexts.length !== new Set(optionTexts).size) {
       throw new Error("Duplicate options are not allowed in a question");
+    }
+
+    if (newOptions.length < 2) {
+      throw new Error("A question must have at least 2 options");
     }
 
     const correctOptionsCount = newOptions.filter(
@@ -116,22 +118,40 @@ questionSchema.pre("findOneAndUpdate", async function () {
     if (correctOptionsCount > 1) {
       throw new Error("Only one option can be marked as correct in a question");
     }
+
+    if (correctOptionsCount === 0) {
+      throw new Error(
+        "At least one option must be marked as correct in a question",
+      );
+    }
   }
 
-  // 🔥 If single option is being updated using positional operator
   if (update.$set) {
-    const isSettingCorrect = Object.keys(update.$set).some((key) =>
-      key.includes("isCorrect"),
-    );
+    const isCorrectValue = update.$set["options.$.isCorrect"];
+    const optionIdFromFilter = filter["options._id"];
 
-    if (isSettingCorrect && update.$set["options.$.isCorrect"] === true) {
+    if (isCorrectValue === true) {
       const alreadyCorrect = currentDoc.options.some(
-        (opt: any) => opt.isCorrect === true,
+        (opt: any) =>
+          opt.isCorrect === true &&
+          opt._id.toString() !== optionIdFromFilter?.toString(),
       );
-
       if (alreadyCorrect) {
         throw new Error(
           "Only one option can be marked as correct in a question",
+        );
+      }
+    }
+
+    if (isCorrectValue === false) {
+      const otherCorrectExists = currentDoc.options.some(
+        (opt: any) =>
+          opt.isCorrect === true &&
+          opt._id.toString() !== optionIdFromFilter?.toString(),
+      );
+      if (!otherCorrectExists) {
+        throw new Error(
+          "At least one option must be marked as correct in a question",
         );
       }
     }

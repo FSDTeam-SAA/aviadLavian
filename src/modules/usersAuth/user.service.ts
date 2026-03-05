@@ -11,7 +11,10 @@ import bcryptjs from "bcryptjs";
 import { emailValidator } from "../../helpers/emailValidator";
 import { generateOTP } from "../../utils/otpGenerator";
 import { mailer } from "../../helpers/nodeMailer";
-import { forgotPasswordOtpTemplate } from "../../tempaletes/auth.templates";
+import {
+  forgotPasswordOtpTemplate,
+  forgotPasswordUnifiedTemplate,
+} from "../../tempaletes/auth.templates";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
@@ -170,18 +173,16 @@ export const userService = {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "User not found");
 
-    // 1️⃣ Token generate
     const resetToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
-    // 2️⃣ OTP generate
-    const otp = Number(generateOTP()); // apnar existing OTP function
+    const otp = Number(generateOTP());
 
-    // 3️⃣ Save token + OTP + expiry in user
-    const expireTime = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    const expireTime = new Date(Date.now() + 10 * 60 * 1000);
+
     user.passwordResetToken = hashedToken;
     user.passwordResetExpire = expireTime;
     user.forgetPasswordOtp = otp;
@@ -189,44 +190,79 @@ export const userService = {
 
     await user.save({ validateBeforeSave: false });
 
-    // 4️⃣ Send OTP via email
-    const resetTemplate = forgotPasswordOtpTemplate(
-      user.name?.fullName || "",
-      otp,
-    );
+    const fullName = `${user.FirstName} ${user.LastName}`;
+    const resetUrl = `http://localhost:5000/api/v1/auth/reset-password?token=${resetToken}`;
+    const template = forgotPasswordUnifiedTemplate(fullName, otp, resetUrl);
+
     setImmediate(async () => {
-      await mailer({
-        email: user.email,
-        subject: "Password Reset OTP",
-        template: resetTemplate,
-      });
+      try {
+        await mailer({
+          email: user.email,
+          subject: "Reset Your Password - Medical Education Platform",
+          template: template,
+        });
+      } catch (error) {
+        console.error("Email sending failed:", error);
+      }
     });
 
-    // 5️⃣ Return token for link
-    return { resetToken, user };
+    return { user };
   },
-  async resetPassword(token: string, otp: number, newPassword: string) {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  async resetPassword(
+    token: string,
+    otp: number,
+    newPassword: string,
+    email: string,
+  ) {
+    if (token !== ":token") {
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
-    const user = await userModel.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpire: { $gt: Date.now() },
-      passwordResetOtp: otp,
-      passwordResetOtpExpire: { $gt: Date.now() },
-    });
+      const user = await userModel.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpire: { $gt: Date.now() },
+        passwordResetOtp: otp,
+        passwordResetOtpExpire: { $gt: Date.now() },
+      });
+      console.log("token", token);
 
-    if (!user) throw new CustomError(400, "Token or OTP invalid/expired");
+      if (!user) throw new CustomError(400, "Token or OTP invalid/expired");
 
-    // Password reset
-    user.password = newPassword;
-    user.passwordResetToken = "";
-    user.passwordResetExpire = null;
-    user.forgetPasswordOtp = null;
-    user.frogetPasswordOtpExpire = null;
-    user.refreshToken = ""; // sob session revoke
+      // Password reset
+      user.password = newPassword;
+      user.passwordResetToken = "";
+      user.passwordResetExpire = null;
+      user.forgetPasswordOtp = null;
+      user.frogetPasswordOtpExpire = null;
+      user.refreshToken = ""; // sob session revoke
 
-    await user.save();
-    return true;
+      await user.save();
+      return true;
+    } else {
+      const user = await userModel
+        .findOne({ email })
+        .select("forgetPasswordOtp frogetPasswordOtpExpire email ");
+      if (!user) throw new CustomError(400, "User not found");
+      console.log("otpss", user.forgetPasswordOtp);
+      if (user.forgetPasswordOtp !== otp)
+        throw new CustomError(400, "OTP invalid/expiredsadfgds");
+
+      // check time
+      if (user.frogetPasswordOtpExpire!.getTime() < Date.now()) {
+        throw new CustomError(400, "OTP expired");
+      }
+
+      // Password reset
+      user.password = newPassword;
+      user.forgetPasswordOtp = null;
+      user.frogetPasswordOtpExpire = null;
+      user.refreshToken = ""; // sob session revoke
+
+      await user.save();
+      return true;
+    }
   },
   async generateAccessToken(refreshToken: string) {
     const decoded = jwt.verify(

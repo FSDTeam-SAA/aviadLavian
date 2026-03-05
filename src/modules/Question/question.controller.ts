@@ -11,9 +11,10 @@ export const createQuestion = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 201, "Question created", question);
 });
 
-export const getAllQuestions = asyncHandler(async (_req, res) => {
-  const questions = await questionService.getAllQuestions();
-  ApiResponse.sendSuccess(res, 200, "Question list", questions);
+export const getAllQuestions = asyncHandler(async (req, res) => {
+  const questions = await questionService.getAllQuestions(req.query);
+  const Response = { questions, questionsCount: questions.length };
+  ApiResponse.sendSuccess(res, 200, "Question list", Response);
 });
 
 export const getQuestionById = asyncHandler(async (req, res) => {
