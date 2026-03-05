@@ -1,5 +1,8 @@
 import type { Response } from "express";
 class ApiResponse<T = unknown> {
+  static sendError(res: Response<any, Record<string, any>>, arg1: number, arg2: string, arg3: any): any {
+      throw new Error("Method not implemented.");
+  }
   message: string;
   statusCode: number;
   status: string;

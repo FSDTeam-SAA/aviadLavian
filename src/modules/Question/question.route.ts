@@ -7,6 +7,7 @@ import {
   deleteQuestion,
   hideQuestion,
   unhideQuestion,
+  updateQuestionOption,
 } from "./question.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 
@@ -31,6 +32,12 @@ router.patch(
   authGuard,
   allowRole("admin"),
   updateQuestion,
+);
+router.patch(
+  "/update-option/:questionId/options/:optionId",
+  authGuard,
+  allowRole("admin"),
+  updateQuestionOption,
 );
 router.delete(
   "/delete-question/:id",
