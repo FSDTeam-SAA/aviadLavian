@@ -23,6 +23,15 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
   return flashcard;
 };
 
+//create flashcard from injury
+const getFlashcardByInjuryId = async (injuryId: string) => {
+  const flashcard = await FlashcardModel.find({ topicId: injuryId, isActive: true });
+  if (!flashcard) throw new CustomError(404, "Flashcard not found");
+  console.log(flashcard);
+
+  return flashcard;
+}
+
 //get single flashcard
 const getSingleFlashcard = async (id: string) => {
   const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true });
@@ -50,20 +59,42 @@ const getAllFlashcards = async (
     match.isActive = true;
   }
 
-  // Search filter
+  // Search filter (topicId is SINGLE ObjectId string now)
   if (topicId) {
     const regex = new RegExp(topicId, "i");
     match.$or = [
       { question: regex },
-      { topicId: { $in: [regex] } },
+      { topicId: regex }, // ✅ topicId is string/ObjectId string, not array
     ];
   }
 
   const sortObj: any = sort === "accending" ? { createdAt: 1 } : { createdAt: -1 };
 
-  // Aggregation pipeline with $facet for pagination + total
   const pipeline: any[] = [
     { $match: match },
+
+    // ✅ Populate topicId (single) -> Injury object
+    {
+      $lookup: {
+        from: "injuries",
+        let: {
+          topicIdObj: {
+            $cond: [
+              { $eq: [{ $type: "$topicId" }, "objectId"] },
+              "$topicId",
+              { $toObjectId: "$topicId" }, // if stored as string
+            ],
+          },
+        },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$_id", "$$topicIdObj"] } } },
+          { $project: { __v: 0, createdAt: 0, updatedAt: 0 } },
+        ],
+        as: "topicId",
+      },
+    },
+    // topicId becomes single object instead of array
+    { $addFields: { topicId: { $arrayElemAt: ["$topicId", 0] } } },
   ];
 
   if (userId) {
@@ -78,40 +109,30 @@ const getAllFlashcards = async (
                 $expr: {
                   $and: [
                     { $eq: ["$flashcardId", "$$flashcardId"] },
-                    { $eq: ["$userId", new Types.ObjectId(userId)] }
-                  ]
-                }
-              }
+                    { $eq: ["$userId", new Types.ObjectId(userId)] },
+                  ],
+                },
+              },
             },
-            { $project: { flashcardId: 1, nextReviewAt: 1 } }
+            { $project: { flashcardId: 1, nextReviewAt: 1 } },
           ],
-          as: "progress"
-        }
+          as: "progress",
+        },
       },
-      {
-        $addFields: { progress: { $arrayElemAt: ["$progress", 0] } }
-      },
+      { $addFields: { progress: { $arrayElemAt: ["$progress", 0] } } },
       {
         $match: {
-          $or: [
-            { "progress.nextReviewAt": { $lte: now } },
-            { "progress": { $eq: null } }
-          ]
-        }
+          $or: [{ "progress.nextReviewAt": { $lte: now } }, { progress: { $eq: null } }],
+        },
       }
     );
   }
 
-  // Facet for total + paginated results
   pipeline.push({
     $facet: {
       meta: [{ $count: "total" }],
-      data: [
-        { $sort: sortObj },
-        { $skip: skip },
-        { $limit: pageLimit }
-      ]
-    }
+      data: [{ $sort: sortObj }, { $skip: skip }, { $limit: pageLimit }],
+    },
   });
 
   const result = await FlashcardModel.aggregate(pipeline);
@@ -141,38 +162,51 @@ const updateFlashcard = async (
   data: any,
   image?: Express.Multer.File
 ) => {
+  if (!Types.ObjectId.isValid(id)) {
+    throw new CustomError(400, "Invalid flashcard id");
+  }
+
   const updateQuery: any = {};
 
-
   // Normal field updates
-  if (data.question) updateQuery.question = data.question;
-  if (data.answer) updateQuery.answer = data.answer;
-  if (data.difficulty) updateQuery.difficulty = data.difficulty;
-  if (data.isActive !== undefined && data.isActive) {
-    updateQuery.isActive = data.isActive === "true" ? true : false;
+  if (data.question !== undefined) updateQuery.question = data.question;
+  if (data.answer !== undefined) updateQuery.answer = data.answer;
+  if (data.difficulty !== undefined) updateQuery.difficulty = data.difficulty;
+
+  // isActive ("true" | "false")
+  if (data.isActive !== undefined) {
+    updateQuery.isActive = data.isActive === "true";
   }
 
-
-  // Add topicId (no duplicates)
-  if (data.addTopicId?.length) {
-    updateQuery.$addToSet = {
-      topicId: { $each: data.addTopicId },
-    };
+  // ✅ topicId is SINGLE now (replace it)
+  // accept either `data.topicId` or your existing `data.addTopicId[0]`
+  if (data.topicId) {
+    if (!Types.ObjectId.isValid(data.topicId)) {
+      throw new CustomError(400, "Invalid topicId");
+    }
+    updateQuery.topicId = data.topicId;
+  } else if (Array.isArray(data.addTopicId) && data.addTopicId.length > 0) {
+    const nextTopicId = data.addTopicId[0];
+    if (!Types.ObjectId.isValid(nextTopicId)) {
+      throw new CustomError(400, "Invalid addTopicId");
+    }
+    updateQuery.topicId = nextTopicId;
   }
 
-  // Remove topicId
-  if (data.removeTopicId?.length) {
-    updateQuery.$pull = {
-      topicId: { $in: data.removeTopicId },
-    };
+  // If someone sends removeTopicId for single field, allow clearing (optional)
+  if (Array.isArray(data.removeTopicId) && data.removeTopicId.length > 0) {
+    // only clear if current topicId is in remove list
+    updateQuery.topicId = null;
   }
 
-  // Update document
-  const flashcard = await FlashcardModel.findByIdAndUpdate(
-    id,
-    updateQuery,
-    { new: true }
-  );
+  // Update + ✅ populate topicId
+  let flashcard = await FlashcardModel.findByIdAndUpdate(id, updateQuery, {
+    new: true,
+  }).populate({
+    path: "topicId",
+    model: "Injury",
+    select: "-__v -createdAt -updatedAt",
+  });
 
   if (!flashcard) {
     throw new CustomError(404, "Flashcard not found");
@@ -189,6 +223,13 @@ const updateFlashcard = async (
       flashcard.image = uploaded;
       await flashcard.save();
     }
+
+    // re-populate after save (because save returns doc without re-populate sometimes)
+    flashcard = await FlashcardModel.findById(flashcard._id).populate({
+      path: "topicId",
+      model: "Injury",
+      select: "-__v -createdAt -updatedAt",
+    });
   }
 
   return flashcard;
@@ -207,4 +248,4 @@ const deleteFlashcard = async (id: string) => {
 }
 
 
-export const flashcardService = { createFlashcard, getSingleFlashcard, getAllFlashcards, updateFlashcard, deleteFlashcard };
+export const flashcardService = { createFlashcard, getFlashcardByInjuryId, getSingleFlashcard, getAllFlashcards, updateFlashcard, deleteFlashcard };

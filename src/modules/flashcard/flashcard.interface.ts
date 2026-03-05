@@ -6,7 +6,7 @@ export interface IFlashcard {
     public_id: string;
     secure_url: string;
   };
-  topicId: string[];
+  topicId: string;
   difficulty: "easy" | "medium" | "hard";
   isActive: boolean;
   createdAt?: Date;
@@ -16,7 +16,7 @@ export interface IFlashcard {
 export interface ICreateFlashcard {
   question?: string;
   answer?: string;
-  topicId?: string[];
+  topicId?: string;
   difficulty?: string
 }
 

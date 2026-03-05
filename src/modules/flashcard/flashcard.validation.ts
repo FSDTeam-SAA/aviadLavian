@@ -14,14 +14,8 @@ export const createFlashcardSchema = z.object({
     .transform((val) => val.trim()),
 
   topicId: z
-    .array(
-      z
-        .string()
-        .min(1, "Topic ID cannot be empty")
-        .max(50, "Topic ID cannot exceed 50 characters")
-        .transform((val) => val.trim())
-    )
-    .min(1, "At least one topic ID is required"),
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid MongoDB ObjectId"),
 
   difficulty: z.enum(["easy", "medium", "hard"]),
 }).strict();
@@ -41,29 +35,7 @@ export const updateFlashcardSchema = z.object({
     .transform((val) => val.trim())
     .optional(),
 
-  difficulty: z.enum(["easy", "medium", "hard"]).optional(),
-
-  addTopicId: z
-    .array(
-      z
-        .string()
-        .min(1, "Topic ID cannot be empty")
-        .max(50, "Topic ID cannot exceed 50 characters")
-        .transform((val) => val.trim())
-    )
-    .optional(),
-
-  removeTopicId: z
-    .array(
-      z
-        .string()
-        .min(1, "Topic ID cannot be empty")
-        .max(50, "Topic ID cannot exceed 50 characters")
-        .transform((val) => val.trim())
-    )
-    .optional(),
-
-  isActive: z.enum(["true", "false"]).optional(),
+  difficulty: z.enum(["easy", "medium", "hard"]).optional()
 })
   .strict()
 

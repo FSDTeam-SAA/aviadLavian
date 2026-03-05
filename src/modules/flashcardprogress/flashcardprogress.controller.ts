@@ -24,3 +24,20 @@ export const reviewFlashcard = asyncHandler(
     );
   }
 );
+
+
+//get all flashcard progress for a user
+export const getFlashcardProgress = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId: string = req.user?._id as string;
+
+    const progress = await flashcardprogressService.getFlashcardProgress(userId);
+
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "Flashcard progress retrieved successfully",
+      progress
+    );
+  }
+);

@@ -8,6 +8,7 @@ export interface IFlashcardProgress {
   repetitions: number;
   interval: number;
   easeFactor: number;
+  userAnswer: string;
 
   lastQuality?: number; // 1 | 3 | 5;
   lastReviewedAt?: Date;

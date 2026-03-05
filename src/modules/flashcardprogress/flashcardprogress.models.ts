@@ -26,6 +26,10 @@ const flashcardProgressSchema = new Schema<IFlashcardProgressDocument>(
       default: 1,
     },
 
+    userAnswer: {
+      type: String,
+    },
+
     easeFactor: {
       type: Number,
       default: 2.5,
