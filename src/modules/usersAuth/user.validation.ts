@@ -41,21 +41,13 @@ export const resetPasswordSchema = z
     password: z
       .string()
       .min(6, "Password must be at least 6 characters")
-      .max(100, "Password too long"),
-    otp: z
-      .number()
-      .int("OTP must be a number")
-      .min(100000, "OTP must be 6 digits")
-      .max(999999, "OTP must be 6 digits"),
-    email: z.email("Invalid email"),
+      .max(100, "Password too long")
+      .optional(),
+    token: z.string().optional(),
+    otp: z.number().int().optional(),
+    email: z.string().email().optional(),
   })
   .strict();
-
-// export const refreshTokenSchema = z
-//   .object({
-//     refreshToken: z.string().min(1, "Refresh token required").optional(),
-//   })
-//   .strict();
 
 export const updateUserSchema = z
   .object({
