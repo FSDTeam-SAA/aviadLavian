@@ -174,11 +174,14 @@ export const userService = {
     if (!user) throw new CustomError(400, "User not found");
 
     const resetToken = crypto.randomBytes(32).toString("hex");
+
+    console.log("resetToken", resetToken);
     const hashedToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
+    console.log("hashedToken", hashedToken);
     const otp = Number(generateOTP());
 
     const expireTime = new Date(Date.now() + 10 * 60 * 1000);
@@ -214,19 +217,19 @@ export const userService = {
     newPassword: string,
     email: string,
   ) {
+    console.log("token", token);
     if (token !== ":token") {
       const hashedToken = crypto
         .createHash("sha256")
         .update(token)
         .digest("hex");
 
+      console.log("hashedToken", hashedToken);
+
       const user = await userModel.findOne({
         passwordResetToken: hashedToken,
         passwordResetExpire: { $gt: Date.now() },
-        passwordResetOtp: otp,
-        passwordResetOtpExpire: { $gt: Date.now() },
       });
-      console.log("token", token);
 
       if (!user) throw new CustomError(400, "Token or OTP invalid/expired");
 
