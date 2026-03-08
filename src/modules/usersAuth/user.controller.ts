@@ -14,7 +14,6 @@ import { userService } from "./user.service";
 
 export const registration = asyncHandler(async (req, res) => {
   const user = await userService.registerUser(req.body);
-  console.log("from 17", user.verificationOtp);
   const verificationTemplate = accountVerifyTemplate(
     user.FirstName,
     user.verificationOtp,

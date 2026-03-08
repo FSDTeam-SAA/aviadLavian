@@ -7,5 +7,3 @@ export const generateOTP = (): string => {
     lowerCaseAlphabets: false,
   });
 };
-
-console.log("otp", generateOTP());
