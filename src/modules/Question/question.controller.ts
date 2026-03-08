@@ -11,9 +11,10 @@ export const createQuestion = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 201, "Question created", question);
 });
 
-export const getAllQuestions = asyncHandler(async (_req, res) => {
-  const questions = await questionService.getAllQuestions();
-  ApiResponse.sendSuccess(res, 200, "Question list", questions);
+export const getAllQuestions = asyncHandler(async (req, res) => {
+  const questions = await questionService.getAllQuestions(req.query);
+  const Response = { questions, questionsCount: questions.length };
+  ApiResponse.sendSuccess(res, 200, "Question list", Response);
 });
 
 export const getQuestionById = asyncHandler(async (req, res) => {
@@ -30,7 +31,22 @@ export const updateQuestion = asyncHandler(async (req, res) => {
   );
   ApiResponse.sendSuccess(res, 200, "Question updated", question);
 });
+export const updateQuestionOption = asyncHandler(async (req, res) => {
+  const { questionId, optionId } = req.params;
 
+  const updatedQuestion = await questionService.updateSingleOption(
+    questionId as string,
+    optionId as string,
+    req.body,
+  );
+
+  ApiResponse.sendSuccess(
+    res,
+    200,
+    "Option updated successfully",
+    updatedQuestion,
+  );
+});
 export const deleteQuestion = asyncHandler(async (req, res) => {
   const question = await questionService.deleteQuestion(
     req.params.id as string,

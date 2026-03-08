@@ -10,6 +10,11 @@ import bcryptjs from "bcryptjs";
 // import { redisTokenService } from "../../helpers/redisTokenService";
 import { emailValidator } from "../../helpers/emailValidator";
 import { generateOTP } from "../../utils/otpGenerator";
+import { mailer } from "../../helpers/nodeMailer";
+import {
+  forgotPasswordOtpTemplate,
+  forgotPasswordUnifiedTemplate,
+} from "../../tempaletes/auth.templates";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
@@ -168,43 +173,99 @@ export const userService = {
     const user = await userModel.findOne({ email });
     if (!user) throw new CustomError(400, "User not found");
 
-    // generate random token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
-    // hash token before saving
+    console.log("resetToken", resetToken);
     const hashedToken = crypto
       .createHash("sha256")
       .update(resetToken)
       .digest("hex");
 
+    console.log("hashedToken", hashedToken);
+    const otp = Number(generateOTP());
+
+    const expireTime = new Date(Date.now() + 10 * 60 * 1000);
+
     user.passwordResetToken = hashedToken;
-    user.passwordResetExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+    user.passwordResetExpire = expireTime;
+    user.forgetPasswordOtp = otp;
+    user.frogetPasswordOtpExpire = expireTime;
 
     await user.save({ validateBeforeSave: false });
 
-    return {
-      resetToken, // 👉 only send plain token via email
-      user,
-    };
-  },
-  async resetPassword(token: string, newPassword: string) {
-    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+    const fullName = `${user.FirstName} ${user.LastName}`;
+    const resetUrl = `http://localhost:5000/api/v1/auth/reset-password?token=${resetToken}`;
+    const template = forgotPasswordUnifiedTemplate(fullName, otp, resetUrl);
 
-    const user = await userModel.findOne({
-      passwordResetToken: hashedToken,
-      passwordResetExpire: { $gt: Date.now() },
+    setImmediate(async () => {
+      try {
+        await mailer({
+          email: user.email,
+          subject: "Reset Your Password - Medical Education Platform",
+          template: template,
+        });
+      } catch (error) {
+        console.error("Email sending failed:", error);
+      }
     });
 
-    if (!user) throw new CustomError(400, "Token invalid or expired");
+    return { user };
+  },
+  async resetPassword(
+    token: string,
+    otp: number,
+    newPassword: string,
+    email: string,
+  ) {
+    console.log("token", token);
+    if (token !== ":token") {
+      const hashedToken = crypto
+        .createHash("sha256")
+        .update(token)
+        .digest("hex");
 
-    user.password = newPassword;
-    user.passwordResetToken = "";
-    user.passwordResetExpire = null;
-    user.refreshToken = ""; // revoke all sessions
+      console.log("hashedToken", hashedToken);
 
-    await user.save();
+      const user = await userModel.findOne({
+        passwordResetToken: hashedToken,
+        passwordResetExpire: { $gt: Date.now() },
+      });
 
-    return true;
+      if (!user) throw new CustomError(400, "Token or OTP invalid/expired");
+
+      // Password reset
+      user.password = newPassword;
+      user.passwordResetToken = "";
+      user.passwordResetExpire = null;
+      user.forgetPasswordOtp = null;
+      user.frogetPasswordOtpExpire = null;
+      user.refreshToken = ""; // sob session revoke
+
+      await user.save();
+      return true;
+    } else {
+      const user = await userModel
+        .findOne({ email })
+        .select("forgetPasswordOtp frogetPasswordOtpExpire email ");
+      if (!user) throw new CustomError(400, "User not found");
+      console.log("otpss", user.forgetPasswordOtp);
+      if (user.forgetPasswordOtp !== otp)
+        throw new CustomError(400, "OTP invalid/expiredsadfgds");
+
+      // check time
+      if (user.frogetPasswordOtpExpire!.getTime() < Date.now()) {
+        throw new CustomError(400, "OTP expired");
+      }
+
+      // Password reset
+      user.password = newPassword;
+      user.forgetPasswordOtp = null;
+      user.frogetPasswordOtpExpire = null;
+      user.refreshToken = ""; // sob session revoke
+
+      await user.save();
+      return true;
+    }
   },
   async generateAccessToken(refreshToken: string) {
     const decoded = jwt.verify(

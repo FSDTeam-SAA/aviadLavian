@@ -10,7 +10,7 @@ const articleSchema = new Schema<IArticle>(
         },
         topicIds: [
             {
-                type: String,
+                type: Schema.Types.Mixed,
                 required: true,
             },
         ],

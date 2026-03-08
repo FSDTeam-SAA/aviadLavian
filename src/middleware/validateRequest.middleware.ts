@@ -3,7 +3,7 @@ import { RequestHandler, NextFunction, Request, Response } from "express";
 import CustomError from "../helpers/CustomError";
 import config from "../config";
 
-export const validateRequest = (schema: ZodSchema): RequestHandler => {
+export const validateRequest = (schema: ZodSchema, options?: { allowEmpty?: boolean }): RequestHandler => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (config.env === "development") {
@@ -19,8 +19,8 @@ export const validateRequest = (schema: ZodSchema): RequestHandler => {
           typeof req.files === "object" &&
           Object.keys(req.files).length > 0);
 
-      // If BOTH body and image are missing
-      if (!hasBody && !hasFile) {
+      // If BOTH body and image are missing (skip check if allowEmpty is true)
+      if (!options?.allowEmpty && !hasBody && !hasFile) {
         return next(
           new CustomError(400, "At least one field should be updated", [
             {
@@ -31,9 +31,9 @@ export const validateRequest = (schema: ZodSchema): RequestHandler => {
         );
       }
 
-      // Validate body ONLY if it exists
-      if (hasBody) {
-        await schema.parseAsync(req.body);
+      // Validate body (always run if allowEmpty, otherwise only if body exists)
+      if (hasBody || options?.allowEmpty) {
+        await schema.parseAsync(req.body || {});
       }
 
       next();

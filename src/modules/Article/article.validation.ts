@@ -1,22 +1,23 @@
 import { z } from "zod";
+import { Types } from "mongoose";
 
-// Helper to transform comma-separated string or array to array
+// Helper to transform comma-separated string or array to array of strings/ObjectIds
 const topicIdsSchema = z.union([
-    z.array(z.string().trim()),
+    z.array(z.string().trim()).transform((arr) =>
+        arr.map((val) => (Types.ObjectId.isValid(val) ? new Types.ObjectId(val) : val))
+    ),
     z.string().transform((val) => {
+        let items: string[];
         try {
             // Try parsing as JSON first (if sent as JSON.stringify)
             const parsed = JSON.parse(val);
-            if (Array.isArray(parsed)) return parsed;
+            if (Array.isArray(parsed)) items = parsed.map((s: any) => String(s).trim());
+            else items = val ? val.split(",").map((s) => s.trim()).filter(Boolean) : [];
         } catch {
             // Fallback to comma-separated string
+            items = val ? val.split(",").map((s) => s.trim()).filter(Boolean) : [];
         }
-        return val
-            ? val
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : [];
+        return items.map((item) => (Types.ObjectId.isValid(item) ? new Types.ObjectId(item) : item));
     }),
 ]);
 

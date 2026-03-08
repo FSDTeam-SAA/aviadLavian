@@ -1,10 +1,10 @@
 import { Types } from "mongoose";
 
-export interface IAttempt {
-  examId: Types.ObjectId;
+// একজন user একটা specific option select করেছে কিনা
+export interface IQuestionBankAttempt {
   userId: Types.ObjectId;
   questionId: Types.ObjectId;
   selectedOptionId: Types.ObjectId;
   isCorrect: boolean;
-  marksObtained: number;
+  attemptedAt: Date;
 }
