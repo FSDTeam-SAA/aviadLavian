@@ -7,7 +7,7 @@ export interface IFile {
 
 export interface IArticle {
     name: string;
-    topicIds: string[];
+    topicIds: (string | Types.ObjectId)[];
     description: string;
     image?: IFile;
     video?: IFile;

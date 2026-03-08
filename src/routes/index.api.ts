@@ -11,6 +11,7 @@ import { flashcardprogressRoute } from "../modules/flashcardprogress/flashcardpr
 import questionBankRoutes from "../modules/questionbank/questionbank.routes";
 import examAttemptRoutes from "../modules/examattempt/examattempt.routes";
 import quizRoutes from "../modules/quiz/quiz.routes";
+import { learningPlanRoute } from "../modules/learningplan/learningplan.route";
 
 router.use("/user", userRoute);
 router.use("/flashcard", flashcardRoute);
@@ -19,6 +20,7 @@ router.use("/question", questionRoute);
 
 router.use("/injury", injuryRoute);
 router.use("/article", articleRoutes);
+router.use("/learning-plan", learningPlanRoute);
 
 
 // Questions and quiz
