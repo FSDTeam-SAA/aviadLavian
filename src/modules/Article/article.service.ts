@@ -46,7 +46,15 @@ const getAllArticles = async (params: IGetAllArticlesParams) => {
 
     const query: any = {};
     if (topicId) {
-        query.topicIds = topicId;
+        // Use MongoDB ObjectId for topicId matching
+        const { Types } = require("mongoose");
+        try {
+            const objectId = new Types.ObjectId(topicId);
+            query.topicIds = { $in: [objectId] };
+        } catch {
+            // fallback: if not valid ObjectId, match as string
+            query.topicIds = topicId;
+        }
     }
     if (name) {
         query.name = { $regex: name, $options: "i" };
