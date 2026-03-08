@@ -24,12 +24,10 @@ const flashcardSchema = new Schema<IFlashcard>({
       required: false,
     },
   },
-  topicId:
-  {
-    type: String,
-    required: true,
-  }
-  ,
+  topicId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Injury",
+  },
   difficulty: {
     type: String,
     required: true,

@@ -1,13 +1,15 @@
 import { ZodSchema, ZodError } from "zod";
 import { RequestHandler, NextFunction, Request, Response } from "express";
 import CustomError from "../helpers/CustomError";
+import config from "../config";
 
 export const validateRequest = (schema: ZodSchema): RequestHandler => {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
-      console.log("🔍 Request Body:", req.body);
-      console.log("🔍 Content-Type:", req.headers["content-type"]);
-
+      if (config.env === "development") {
+        console.log("🔍 Request Body:", req.body);
+        console.log("🔍 Content-Type:", req.headers["content-type"]);
+      }
       const hasBody = req.body && Object.keys(req.body).length > 0;
 
       const hasFile =

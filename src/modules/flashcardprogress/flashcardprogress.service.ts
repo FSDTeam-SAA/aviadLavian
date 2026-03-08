@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import CustomError from "../../helpers/CustomError";
 import { FlashcardModel } from "../flashcard/flashcard.models";
 import { FlashcardProgressModel } from "./flashcardprogress.models";
@@ -21,14 +21,13 @@ const parseInterval = (intervalStr: string): number => {
   const value = parseInt(match[1]!, 10);
   const unit = match[2]!.toLowerCase();
 
-  if (unit === "m") return value / (24 * 60); // minutes to days
-  if (unit === "d") return value; // days
+  if (unit === "m") return value / (24 * 60);
+  if (unit === "h") return value / 24;
+  if (unit === "d") return value;
   return 0;
 };
 
-/**
- * Review a flashcard and update spaced repetition progress
- */
+// Review a flashcard and update spaced repetition progress
 const reviewFlashcard = async (
   userId: string,
   flashcardId: string,
@@ -54,11 +53,13 @@ const reviewFlashcard = async (
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const diffMinutes = Math.ceil((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    const diffSeconds = Math.ceil((diffMs % (1000 * 60)) / 1000);
 
     const waitMessage =
       (diffDays ? `${diffDays} day(s) ` : "") +
       (diffHours ? `${diffHours} hour(s) ` : "") +
-      (diffMinutes ? `${diffMinutes} minute(s)` : "");
+      (diffMinutes ? `${diffMinutes} minute(s)` : "") +
+      (diffSeconds ? `${diffSeconds} second(s)` : "");
 
     return {
       progress,
@@ -80,10 +81,15 @@ const reviewFlashcard = async (
     interval = parseInterval(customInterval);
   }
 
+
+  //!If interval is not provided, use default based on quality 
+  /**
+ * @description Determine the default review interval when no interval is provided.
+ */
   if (!interval) {
-    if (quality === 5) interval = 5; // correct → 5 days
-    else if (quality === 3) interval = 3; // unknown → 3 days
-    else interval = 5 / (24 * 60); // wrong → 5 minutes
+    if (quality === 5) interval = 5;
+    else if (quality === 3) interval = 3;
+    else interval = 5 / (24 * 60);
   }
 
   // Update repetitions
@@ -116,12 +122,171 @@ const reviewFlashcard = async (
 
 
 // Get all flashcard progress for a user
-const getFlashcardProgress = async (userId: string) => {
-  const progressList = await FlashcardProgressModel.find({ userId }).populate("flashcardId");
-  return progressList;
+const getFlashcardProgressByTopic = async (userId: string, topicId: string) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    throw new CustomError(400, "Invalid userId");
+  }
+
+  if (!mongoose.Types.ObjectId.isValid(topicId)) {
+    throw new CustomError(400, "Invalid topicId");
+  }
+
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  const topicObjectId = new mongoose.Types.ObjectId(topicId);
+
+  const result = await FlashcardProgressModel.aggregate([
+    {
+      $match: {
+        userId: userObjectId,
+      },
+    },
+    {
+      $lookup: {
+        from: "flashcards",
+        localField: "flashcardId",
+        foreignField: "_id",
+        as: "flashcardId",
+      },
+    },
+    {
+      $unwind: "$flashcardId",
+    },
+    {
+      $match: {
+        "flashcardId.topicId": topicObjectId,
+      },
+    },
+    {
+      $lookup: {
+        from: "injuries",
+        localField: "flashcardId.topicId",
+        foreignField: "_id",
+        as: "topicData",
+      },
+    },
+    {
+      $unwind: "$topicData",
+    },
+    {
+      $group: {
+        _id: "$topicData._id",
+        topic: {
+          $first: {
+            _id: "$topicData._id",
+            Id: "$topicData.Id",
+            Name: "$topicData.Name",
+            Primary_Body_Region: "$topicData.Primary_Body_Region",
+            Secondary_Body_Region: "$topicData.Secondary_Body_Region",
+            Acuity: "$topicData.Acuity",
+            Image_URL: "$topicData.Image_URL",
+          },
+        },
+        progressCount: { $sum: 1 },
+
+        correctCount: {
+          $sum: {
+            $cond: [{ $eq: ["$userAnswer", "correct"] }, 1, 0],
+          },
+        },
+        wrongCount: {
+          $sum: {
+            $cond: [{ $eq: ["$userAnswer", "wrong"] }, 1, 0],
+          },
+        },
+        unknownCount: {
+          $sum: {
+            $cond: [{ $eq: ["$userAnswer", "unknown"] }, 1, 0],
+          },
+        },
+
+        progress: {
+          $push: {
+            _id: "$_id",
+            userId: "$userId",
+            repetitions: "$repetitions",
+            interval: "$interval",
+            easeFactor: "$easeFactor",
+            lastQuality: "$lastQuality",
+            lastReviewedAt: "$lastReviewedAt",
+            nextReviewAt: "$nextReviewAt",
+            userAnswer: "$userAnswer",
+            createdAt: "$createdAt",
+            updatedAt: "$updatedAt",
+            flashcardId: {
+              _id: "$flashcardId._id",
+              question: "$flashcardId.question",
+              answer: "$flashcardId.answer",
+            },
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: "flashcards",
+        let: { currentTopicId: "$topic._id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ["$topicId", "$$currentTopicId"],
+              },
+            },
+          },
+          {
+            $count: "totalFlashcards",
+          },
+        ],
+        as: "flashcardStats",
+      },
+    },
+    {
+      $addFields: {
+        totalFlashcards: {
+          $ifNull: [{ $arrayElemAt: ["$flashcardStats.totalFlashcards", 0] }, 0],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        summary: {
+          progressCount: "$progressCount",
+          totalFlashcards: "$totalFlashcards",
+          progressText: {
+            $concat: [
+              { $toString: "$progressCount" },
+              " in progress of total ",
+              { $toString: "$totalFlashcards" },
+            ],
+          },
+          correct: "$correctCount",
+          wrong: "$wrongCount",
+          unknown: "$unknownCount",
+        },
+        topic: 1,
+        progress: 1,
+      },
+    },
+  ]);
+
+  return (
+    result[0] || {
+      summary: {
+        progressCount: 0,
+        totalFlashcards: 0,
+        progressText: "0 in progress of total 0",
+        correct: 0,
+        wrong: 0,
+        unknown: 0,
+      },
+      topic: null,
+      progress: [],
+    }
+  );
 };
 
 export const flashcardprogressService = {
   reviewFlashcard,
-  getFlashcardProgress,
+  getFlashcardProgressByTopic: getFlashcardProgressByTopic,
 };
