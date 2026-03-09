@@ -49,12 +49,38 @@ export const resetPasswordSchema = z
   })
   .strict();
 
+
 export const updateUserSchema = z
   .object({
-    name: z.string().min(1, "Name cannot be empty").optional(),
-    profession: z.string().min(1, "Profession cannot be empty").optional(),
+    firstName: z.string().min(1, "First name cannot be empty").optional(),
+
+    lastName: z.string().min(1, "Last name cannot be empty").optional(),
+
     country: z.string().min(1, "Country cannot be empty").optional(),
-    email: z.email("Invalid email format").optional(),
+
+    address: z.string().min(1, "Address cannot be empty").optional(),
+
+    instituteName: z
+      .string()
+      .min(1, "Institute name cannot be empty")
+      .optional(),
+
+    idNumber: z.string().min(1, "ID number cannot be empty").optional(),
+
+    registrationNumber: z
+      .string()
+      .min(1, "Registration number cannot be empty")
+      .optional(),
+
+    dateOfBirth: z.coerce
+      .date().refine((value) => {
+        const minDate = new Date("1900-01-01");
+        const maxDate = new Date();
+        return value >= minDate && value <= maxDate;
+      })
+      .optional(),
+
+    email: z.string().email("Invalid email format").optional(),
   })
   .strict();
 
