@@ -10,8 +10,9 @@ import {
   verifyEmail,
   updatePassword,
   getStudentProgress,
+  getAllUsers,
 } from "./user.controller";
-import { authGuard } from "../../middleware/auth.middleware";
+import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
 import {
@@ -22,6 +23,7 @@ import {
   resetPasswordSchema,
   updateUserSchema,
 } from "./user.validation";
+import { permission } from "../../middleware/permission.middleware";
 
 const router = Router();
 // auth
@@ -32,6 +34,9 @@ router.post(
 );
 
 router.post("/login", validateRequest(loginSchema), login);
+router.post("/get-all-users", authGuard, allowRole("admin"), getAllUsers);
+
+
 router.post("/logout", authGuard, logout);
 
 // // password
