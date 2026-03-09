@@ -9,11 +9,10 @@ const userSchema = new Schema<IUser>(
   {
     FirstName: {
       type: String,
-      required: true,
+
     },
     LastName: {
       type: String,
-      required: true,
     },
     email: {
       type: String,
