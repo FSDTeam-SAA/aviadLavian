@@ -28,6 +28,18 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.get("/api/v1/ping", (req, res) => {
+  res.json({
+    success: true,
+    message: "Server is alive",
+    time: new Date(),
+  });
+});
+
+app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.use("/api/v1", routes);
 
 app.get("/", serverRunningTemplate);
