@@ -70,6 +70,11 @@ export const login = asyncHandler(async (req, res) => {
   });
 });
 
+export const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await userService.getAllUsers();
+  ApiResponse.sendSuccess(res, 200, "Users fetched successfully", users);
+});
+
 export const updateUser = asyncHandler(async (req, res) => {
   const currentEmail = req?.user?.email as string;
 
