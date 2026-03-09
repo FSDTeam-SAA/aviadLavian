@@ -68,6 +68,12 @@ export const userService = {
     return { user, accessToken, refreshToken };
   },
 
+  //get all users
+  async getAllUsers() {
+    const users = await userModel.find({role:"user"}).select("email country FirstName LastName profileImage role");
+    return users;
+  },
+
   async updateUser(email: string, payload: UpdateUserPayload, files?: any) {
     const user = await userModel.findOne({ email });
 
