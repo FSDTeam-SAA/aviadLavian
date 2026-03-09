@@ -3,6 +3,7 @@ import {
   getQuestionsByTopic,
   getQuestionDetails,
   attemptQuestion,
+  getAttemptByTopicController,
 } from "./questionbank.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 
@@ -17,5 +18,11 @@ router.get("/questions/:questionId", authGuard, getQuestionDetails);
 // Question attempt করো
 router.post("/questions/:questionId/attempt", authGuard, attemptQuestion);
 
+
+router.get(
+  "/topics/:topicId/attempt",
+  authGuard, // ensure user is authenticated
+  getAttemptByTopicController,
+);
 const questionBankRoutes = router;
 export default questionBankRoutes;

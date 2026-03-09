@@ -5,6 +5,7 @@ import ApiResponse from "../../utils/apiResponse";
 import { Types } from "mongoose";
 import {
   attemptQuestionBankService,
+  getAttemptByTopicService,
   getQuestionDetailsService,
   getQuestionsByTopicService,
 } from "./questionbank.service";
@@ -74,3 +75,33 @@ export const getQuestionDetails = asyncHandler(
     );
   },
 );
+
+export const getAttemptByTopicController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { topicId } = req.params;
+    const userId = req.user?._id; // assume userId is attached by auth middleware
+
+    if (!topicId) {
+      return res.status(400).json({ message: "topicId is required" });
+    }
+
+    const result = await getAttemptByTopicService(
+      topicId as string,
+      new Types.ObjectId(userId),
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
