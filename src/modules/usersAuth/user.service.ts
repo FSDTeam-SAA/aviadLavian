@@ -76,7 +76,7 @@ export const userService = {
 
   //grt my profile
   async getMyProfile(req: any) {
-    const user = await userModel.findOne({ _id: req.user._id }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status");
+    const user = await userModel.findOne({ _id: req.user._id }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     return user;
   },
 
@@ -86,7 +86,7 @@ export const userService = {
     const image = req.file as Express.Multer.File;
 
 
-    const user = await userModel.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status");
+    const user = await userModel.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     if (!user) throw new CustomError(400, "User not found");
     
     if (image) {
