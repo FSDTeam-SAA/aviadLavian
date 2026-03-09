@@ -8,7 +8,7 @@ import { allowRole, authGuard } from "../../middleware/auth.middleware";
 const router = express.Router();
 
 router.post("/create-flashcard", authGuard, allowRole("admin"), upload.single("image"), validateRequest(createFlashcardSchema), createFlashcard);
-router.get("/get-flashcard-by-injury/:injuryId", getFlashcardByInjuryId);
+router.get("/get-flashcard-by-injury/:injuryId",authGuard, getFlashcardByInjuryId);
 router.get("/get-flashcard/:flashcardId", getFlashcard);
 router.get("/get-flashcards", authGuard, allowRole("admin", "user"), getAllFlashcards);
 router.patch("/update-flashcard/:flashcardId", authGuard, allowRole("admin"), upload.single("image"), validateRequest(updateFlashcardSchema), updateFlashcard);

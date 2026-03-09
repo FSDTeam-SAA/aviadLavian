@@ -3,7 +3,8 @@ import { GetAllFlashcardsParams, ICreateFlashcard } from "./flashcard.interface"
 import CustomError from "../../helpers/CustomError";
 import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { paginationHelper } from "../../utils/pagination";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
+import { FlashcardProgressModel } from "../flashcardprogress/flashcardprogress.models";
 
 const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.File) => {
 
@@ -23,12 +24,44 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
   return flashcard;
 };
 
-//create flashcard from injury
-const getFlashcardByInjuryId = async (injuryId: string) => {
-  const flashcard = await FlashcardModel.find({ topicId: injuryId, isActive: true });
-  if (!flashcard) throw new CustomError(404, "Flashcard not found");
-  return flashcard;
-}
+//get flashcard by injuryId also user progress
+
+const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
+  const userId = req?.user?._id;
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    throw new CustomError(400, "Invalid userId");
+  }
+
+  const flashcards = await FlashcardModel.find({
+    topicId: injuryId,
+    isActive: true,
+  }).lean();
+
+  if (!flashcards.length) {
+    throw new CustomError(404, "Flashcard not found");
+  }
+
+  const flashcardIds = flashcards.map((item) => item._id);
+
+  const progressList = await FlashcardProgressModel.find({
+    userId: new mongoose.Types.ObjectId(userId),
+    flashcardId: { $in: flashcardIds },
+  })
+    .select("flashcardId userAnswer")
+    .lean();
+    
+  const progressMap = new Map(
+    progressList.map((item) => [String(item.flashcardId), item.userAnswer])
+  );
+
+  const result = flashcards.map((flashcard) => ({
+    ...flashcard,
+    userAnswer: progressMap.get(String(flashcard._id)) || "",
+  }));
+
+  return result;
+};
 
 //get single flashcard
 const getSingleFlashcard = async (id: string) => {

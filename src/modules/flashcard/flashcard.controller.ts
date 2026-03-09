@@ -17,7 +17,8 @@ export const createFlashcard = asyncHandler(async (req: Request, res: Response) 
 //get flashcard by injuryId
 export const getFlashcardByInjuryId = asyncHandler(async (req: Request, res: Response) => {
   const { injuryId } = req.params;
-  const flashcard = await flashcardService.getFlashcardByInjuryId(injuryId as string);
+  const flashcard = await flashcardService.getFlashcardByInjuryId(injuryId as string, req);
+
   ApiResponse.sendSuccess(res, 200, "Flashcard found", flashcard);
 });
 
