@@ -8,7 +8,10 @@ import CustomError from "../../helpers/CustomError";
 export const reviewFlashcard = asyncHandler(
   async (req: Request, res: Response) => {
     const userId: string = req.user?._id as string;
-    const data: ICreateFlashcardProgress = req.body;
+    const data: ICreateFlashcardProgress = req.body; 
+
+    if (req.user?.role === "admin") throw new CustomError(403, "Admins are not allowed to take attempt flashcards");
+
 
     const { progress, message } = await flashcardprogressService.reviewFlashcard(
       userId,
@@ -32,7 +35,7 @@ export const getFlashcardProgress = asyncHandler(
   async (req: Request, res: Response) => {
     const userId: string = req.user?._id as string;
     const topicId: string = req.params.topicId as string;
-    if(!topicId) throw new CustomError(400, "topicId query parameter is required");
+    if (!topicId) throw new CustomError(400, "topicId query parameter is required");
 
     const progress = await flashcardprogressService.getFlashcardProgressByTopic(userId, topicId);
 
