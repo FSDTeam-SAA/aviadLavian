@@ -9,6 +9,7 @@ import {
   updateUser,
   verifyEmail,
   updatePassword,
+  getStudentProgress,
 } from "./user.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -71,4 +72,7 @@ router.patch(
 );
 router.route("/verify-email").post(verifyEmail);
 
+
+//students progress
+router.route("/dashboard-leaderboard").get(getStudentProgress);
 export const userRoute = router;

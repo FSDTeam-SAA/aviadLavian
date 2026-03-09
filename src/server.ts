@@ -17,7 +17,6 @@ connectDatabase()
   }).then(() => {
     if (config.env === "development") {
       startPingServerCron();
-      console.log(chalk.blue("[Server] Starting ping server cron..."));
     }
   })
   .catch((error: unknown) => {

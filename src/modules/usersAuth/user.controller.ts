@@ -11,6 +11,7 @@ import {
 import { mailer } from "../../helpers/nodeMailer";
 import config from "../../config";
 import { userService } from "./user.service";
+import { QuestionBankAttemptModel } from "../questionbank/questionbank.models";
 
 export const registration = asyncHandler(async (req, res) => {
   const user = await userService.registerUser(req.body);
@@ -168,4 +169,45 @@ export const generateAccessToken = asyncHandler(async (req, res) => {
   });
 
   ApiResponse.sendSuccess(res, 200, "New access token generated", accessToken);
+});
+
+
+//TODO: Show all user progress for admin dashboard based on lesson history and quizes progress.
+
+export const getStudentProgress = asyncHandler(async (req, res) => {
+  const result = await QuestionBankAttemptModel.aggregate([
+    {
+      $group: {
+        _id: "$userId",
+        totalAttempts: { $sum: 1 },
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "_id",
+        foreignField: "_id",
+        as: "user",
+      },
+    },
+    {
+      $unwind: "$user",
+    },
+    {
+      $project: {
+        _id: 0,
+        totalAttempts: 1,
+        userId: "$_id",
+        name: {
+          $concat: ["$user.FirstName", " ", "$user.LastName"],
+        },
+        profileImage: "$user.profileImage",
+      },
+    },
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: result,
+  });
 });
