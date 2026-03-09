@@ -59,9 +59,11 @@ export const attemptQuestion = asyncHandler(
 export const getQuestionDetails = asyncHandler(
   async (req: Request, res: Response) => {
     const { questionId } = req.params;
+    const userId = req.user?._id;
 
     const question = await getQuestionDetailsService(
       new Types.ObjectId(questionId as string),
+      new Types.ObjectId(userId),
     );
 
     return ApiResponse.sendSuccess(

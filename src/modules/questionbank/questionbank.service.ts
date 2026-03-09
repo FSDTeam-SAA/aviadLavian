@@ -17,12 +17,10 @@ export const getQuestionsByTopicService = async (
     topicId: { $regex: `^${topicId}$`, $options: "i" },
   }).lean();
 
-  // ৩. এটেম্পট করা কোশ্চেন আইডিগুলোর সেট তৈরি
   const attemptedSet = new Set(
     attemptedQuestions.map((q) => q.questionId.toString()),
   );
 
-  // ৪. ডাটা মার্জ করা
   const questionsWithSerial = questions.map((question, index) => ({
     ...question,
     serialNumber: index + 1,
@@ -96,7 +94,11 @@ export const attemptQuestionBankService = async (
   };
 };
 
-export const getQuestionDetailsService = async (questionId: Types.ObjectId) => {
+export const getQuestionDetailsService = async (
+  questionId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+
   const question = await QuestionModel.findOne({
     _id: questionId,
     isDeleted: false,
@@ -107,8 +109,37 @@ export const getQuestionDetailsService = async (questionId: Types.ObjectId) => {
     throw new Error("Question not found");
   }
 
+  const isAttempted = await QuestionBankAttemptModel.findOne({
+    userId,
+    questionId,
+  });
+
+
+  const allQuestionsInTopic = await QuestionModel.find({
+    topicId: question.topicId, 
+    isDeleted: false,
+    isHidden: false,
+  })
+    .select("_id") 
+    .sort({ createdAt: 1 }) 
+    .lean();
+
+
+  const currentIndex = allQuestionsInTopic.findIndex(
+    (q) => q._id.toString() === questionId.toString(),
+  );
+
+
+  const nextQuestionId =
+    currentIndex !== -1 && currentIndex < allQuestionsInTopic.length - 1
+      ? allQuestionsInTopic[currentIndex + 1]!._id
+      : null;
+
+  
   return {
     ...question,
+    isAttempted: !!isAttempted,
+    nextQuestionId, 
     optionStats: question.options.map((opt) => ({
       optionId: opt._id,
       text: opt.text,
