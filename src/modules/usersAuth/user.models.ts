@@ -33,23 +33,36 @@ const userSchema = new Schema<IUser>(
       type: String,
       required: true,
     },
+    instituteName: {
+      type: String,
+      required: false,
+    },
+    dateOfBirth: {
+      type: Date,
+      required: false,
+    },
+    IdNumber: {
+      type: String,
+      required: false,
+    },
+    registrationNumber: {
+      type: String,
+      required: false,
+    },
     country: {
       type: String,
       required: false,
     },
-    addressIds: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
-      },
-    ],
-    profileImage: [
-      {
-        public_id: String,
-        secure_url: String,
-        _id: false,
-      },
-    ],
+    address: {
+      type: String,
+      required: false,
+    },
+    profileImage:
+    {
+      public_id: String,
+      secure_url: String,
+    },
+
     status: {
       type: String,
       enum: Object.values(status),
