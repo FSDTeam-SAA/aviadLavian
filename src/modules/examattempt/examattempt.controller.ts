@@ -19,11 +19,11 @@ export const startExam = asyncHandler(async (req: Request, res: Response) => {
   const { topicId, examName, timeLimitMinutes } = req.body;
   const userId = req.user?._id;
 
-  if (!topicId || !examName) {
+  if (!topicId ) {
     return ApiResponse.sendSuccess(
       res,
       400,
-      "topicId and examName are required",
+      "topicId is required",
     );
   }
 

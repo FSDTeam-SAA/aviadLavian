@@ -1,7 +1,6 @@
 import { Schema, model } from "mongoose";
 import { IExamAnswer, IExamAttempt } from "./examattempt.interface";
 
-
 const examAnswerSchema = new Schema<IExamAnswer>(
   {
     questionId: {
@@ -34,7 +33,7 @@ const examAttemptSchema = new Schema<IExamAttempt>(
     },
     examName: {
       type: String,
-      required: true,
+      default: () => Date.now().toString(),
       trim: true,
     },
 

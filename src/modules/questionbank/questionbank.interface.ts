@@ -6,5 +6,7 @@ export interface IQuestionBankAttempt {
   questionId: Types.ObjectId;
   selectedOptionId: Types.ObjectId;
   isCorrect: boolean;
+  isAttempted: boolean;
+  topicId: string;
   attemptedAt: Date;
 }
