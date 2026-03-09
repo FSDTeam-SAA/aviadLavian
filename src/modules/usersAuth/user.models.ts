@@ -31,7 +31,6 @@ const userSchema = new Schema<IUser>(
     },
     profession: {
       type: String,
-      required: true,
     },
     country: {
       type: String,
@@ -114,7 +113,6 @@ userSchema.pre<IUser>("save", async function () {
     throw new CustomError(409, "Email already exists");
   }
 });
-
 
 // encrypt password in pre middleware
 userSchema.pre<IUser & Document>("save", async function () {
