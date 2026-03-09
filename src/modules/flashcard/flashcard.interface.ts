@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 
 export interface IFlashcard {
   question: string;
@@ -6,7 +7,7 @@ export interface IFlashcard {
     public_id: string;
     secure_url: string;
   };
-  topicId: string;
+  topicId: mongoose.Types.ObjectId;
   difficulty: "easy" | "medium" | "hard";
   isActive: boolean;
   createdAt?: Date;

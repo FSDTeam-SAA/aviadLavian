@@ -7,7 +7,7 @@ import { authGuard } from "../../middleware/auth.middleware";
 const router = express.Router();
 
 router.post("/create-review", authGuard, validateRequest(createFlashcardProgressSchema), reviewFlashcard);
-router.get("/my-progress", authGuard, getFlashcardProgress);
+router.get("/my-progress/:topicId", authGuard, getFlashcardProgress);
 
 
 export const flashcardprogressRoute = router;

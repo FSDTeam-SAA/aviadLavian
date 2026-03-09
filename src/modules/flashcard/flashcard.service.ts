@@ -27,8 +27,6 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
 const getFlashcardByInjuryId = async (injuryId: string) => {
   const flashcard = await FlashcardModel.find({ topicId: injuryId, isActive: true });
   if (!flashcard) throw new CustomError(404, "Flashcard not found");
-  console.log(flashcard);
-
   return flashcard;
 }
 
