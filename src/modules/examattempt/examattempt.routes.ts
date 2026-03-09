@@ -5,6 +5,7 @@ import {
   getExamQuestions,
   submitExam,
   getExamResult,
+  getExamResultByQuestionIdController,
 } from "./examattempt.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 
@@ -24,6 +25,12 @@ router.post("/:examId/submit", authGuard, submitExam);
 
 // Exam result
 router.get("/:examId/result", authGuard, getExamResult);
+
+router.get(
+  "/:examId/questions/:questionId/result",
+  authGuard, 
+  getExamResultByQuestionIdController,
+);
 
 const examAttemptRoutes = router;
 export default examAttemptRoutes;

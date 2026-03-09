@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { ExamAttemptModel } from "./examattempt.models";
-
+import { userModel } from "../usersAuth/user.models";
 
 export const startExamService = async (
   userId: Types.ObjectId,
@@ -24,7 +24,6 @@ export const startExamService = async (
   }
 
   const questionLimit = Math.min(60, allQuestions.length);
-
 
   const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
   const selectedQuestions = shuffled.slice(0, questionLimit);
@@ -226,6 +225,9 @@ export const getExamResultService = async (
     exam.answers.map((a: any) => [a.questionId.toString(), a]),
   );
 
+  // Total user count
+  const allUserCount = await userModel.countDocuments({});
+
   const detailedResults = exam.questions.map((questionId: any, index: any) => {
     const question = questionMap.get(questionId.toString());
     const userAnswer = answerMap.get(questionId.toString());
@@ -237,12 +239,21 @@ export const getExamResultService = async (
       explanation: question?.explanation,
       selectedOptionId: (userAnswer as any)?.selectedOptionId ?? null,
       isCorrect: (userAnswer as any)?.isCorrect ?? false,
-      options: question?.options.map((opt) => ({
-        _id: opt._id,
-        text: opt.text,
-        isCorrect: opt.isCorrect,
-        selectedCount: opt.selectedCount ?? 0,
-      })),
+      options: question?.options.map((opt) => {
+        const selectedCount = opt.selectedCount ?? 0;
+        const selectedPercentage =
+          allUserCount > 0
+            ? Math.round((selectedCount / allUserCount) * 100)
+            : 0;
+
+        return {
+          _id: opt._id,
+          text: opt.text,
+          isCorrect: opt.isCorrect,
+          selectedCount,
+          selectedPercentage,
+        };
+      }),
     };
   });
 
@@ -266,7 +277,6 @@ export const getExamResultService = async (
     detailedResults,
   };
 };
-
 export const getExamHistoryService = async (userId: Types.ObjectId) => {
   const exams = await ExamAttemptModel.find({
     userId,
@@ -279,4 +289,60 @@ export const getExamHistoryService = async (userId: Types.ObjectId) => {
     .lean();
 
   return exams;
+};
+
+export const getExamResultByQuestionIdService = async (
+  examId: Types.ObjectId,
+  userId: Types.ObjectId,
+  questionId: Types.ObjectId,
+) => {
+
+  const exam = await ExamAttemptModel.findOne({
+    _id: examId,
+    userId,
+  }).lean();
+
+  if (!exam) throw new Error("Exam not found");
+  if (exam.status !== "submitted")
+    throw new Error("Exam has not been submitted yet");
+
+
+  const question = await QuestionModel.findById(questionId).lean();
+  if (!question) throw new Error("Question not found");
+
+
+  const userAnswer = exam.answers.find(
+    (a: any) => a.questionId.toString() === questionId.toString(),
+  );
+
+
+  const allUserCount = await userModel.countDocuments({});
+
+  const options = question.options.map((opt) => {
+    const selectedCount = opt.selectedCount ?? 0;
+    const selectedPercentage =
+      allUserCount > 0 ? Math.round((selectedCount / allUserCount) * 100) : 0;
+
+    return {
+      _id: opt._id,
+      text: opt.text,
+      isCorrect: opt.isCorrect,
+      selectedCount,
+      selectedPercentage,
+    };
+  });
+
+
+  return {
+    examId: exam._id,
+    examName: exam.examName,
+    topicId: exam.topicId,
+    questionId: question._id,
+    questionText: question.questionText,
+    explanation: question.explanation,
+    selectedOptionId: userAnswer?.selectedOptionId ?? null,
+    isCorrect: userAnswer?.isCorrect ?? false,
+    options,
+    marks: question.marks ?? 1,
+  };
 };
