@@ -1,7 +1,6 @@
 import { Schema, model } from "mongoose";
 import { IQuestionBankAttempt } from "./questionbank.interface";
 
-
 const questionBankAttemptSchema = new Schema<IQuestionBankAttempt>(
   {
     userId: {
@@ -14,11 +13,19 @@ const questionBankAttemptSchema = new Schema<IQuestionBankAttempt>(
       ref: "Question",
       required: true,
     },
+    topicId: {
+      type: String,
+      // required: true,
+    },
     selectedOptionId: {
       type: Schema.Types.ObjectId,
       required: true,
     },
     isCorrect: {
+      type: Boolean,
+      required: true,
+    },
+    isAttempted: {
       type: Boolean,
       required: true,
     },
