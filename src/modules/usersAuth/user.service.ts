@@ -209,7 +209,7 @@ export const userService = {
   //update status any user by admin only
   async updateUserByID(req: any) {
     const { userId } = req.params
-    const image = req.file as Express.Multer.File;
+const image = req.file as Express.Multer.File;
 
     const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     if (!user) throw new CustomError(400, "User not found");
@@ -291,25 +291,6 @@ export const userService = {
   //delete user
   async deleteUser(req: any) {
     const user = await userModel.findOneAndDelete({ _id: req.user._id });
-    if (!user) throw new CustomError(400, "User not found");
-    //delete image from cloudinary
-    if (user.profileImage?.public_id) {
-      await deleteCloudinary(user.profileImage.public_id);
-    }
-    return user;
-  },
-
-
-  //delete user by id for admin
-  async deleteUserByID(req: any) {
-    const { userId } = req.params
-    if (!userId) throw new CustomError(400, "User id not found in params");
-
-    const user = await userModel.findOneAndDelete({ _id: userId });
-    if (!user) throw new CustomError(400, "User not found");
-    if (user.profileImage?.public_id) {
-      await deleteCloudinary(user.profileImage.public_id);
-    }
     return user;
   },
 
