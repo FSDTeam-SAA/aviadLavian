@@ -148,7 +148,7 @@ export const getAttemptByTopicService = async (
   topicId: string,
   userId: Types.ObjectId,
 ) => {
-  // 1️⃣ Get all questions in topic
+  // all questions of this topic
   const questions = await QuestionModel.find({
     topicId: { $regex: `^${topicId}$`, $options: "i" },
     isDeleted: false,
@@ -157,25 +157,35 @@ export const getAttemptByTopicService = async (
 
   const totalQuestions = questions.length;
 
-  // 2️⃣ Get all user attempts for this topic
-  const attemptedQuestions = await QuestionBankAttemptModel.find({
+  // all attempts by this user in this topic
+  const attempts = await QuestionBankAttemptModel.find({
     userId,
     topicId: { $regex: `^${topicId}$`, $options: "i" },
   }).lean();
 
-  const attemptedSet = new Set(
-    attemptedQuestions.map((q) => q.questionId.toString()),
-  );
+  const attemptedSet = new Set(attempts.map((a) => a.questionId.toString()));
 
-  const attemptedCount = attemptedSet.size;
+  const attemptedCount = attempts.length;
 
-  // 3️⃣ Calculate percentage complete
+  // completion percentage
   const completionPercentage =
     totalQuestions > 0
       ? Math.round((attemptedCount / totalQuestions) * 100)
       : 0;
 
-  // 4️⃣ Map questions with serial number, isAttempted, option stats
+  // correct / incorrect stats
+  const correctCount = attempts.filter((a) => a.isCorrect).length;
+  const incorrectCount = attempts.filter((a) => !a.isCorrect).length;
+
+  const correctPercentage =
+    attemptedCount > 0 ? Math.round((correctCount / attemptedCount) * 100) : 0;
+
+  const incorrectPercentage =
+    attemptedCount > 0
+      ? Math.round((incorrectCount / attemptedCount) * 100)
+      : 0;
+
+  // questions with attempt status
   const questionsWithDetails = questions.map((question, index) => ({
     serialNumber: index + 1,
     _id: question._id,
@@ -185,8 +195,8 @@ export const getAttemptByTopicService = async (
     options: question.options.map((opt) => ({
       optionId: opt._id,
       text: opt.text,
-      isCorrect: opt.isCorrect,
       selectedCount: opt.selectedCount ?? 0,
+      isCorrect: opt.isCorrect,
     })),
   }));
 
@@ -195,6 +205,14 @@ export const getAttemptByTopicService = async (
     totalQuestions,
     attemptedCount,
     completionPercentage,
+
+    stats: {
+      correctCount,
+      incorrectCount,
+      correctPercentage,
+      incorrectPercentage,
+    },
+
     questions: questionsWithDetails,
   };
 };
