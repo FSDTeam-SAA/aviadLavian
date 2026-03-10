@@ -1,4 +1,5 @@
 import { ZodSchema, ZodError } from "zod";
+import fs from "fs";
 import { RequestHandler, NextFunction, Request, Response } from "express";
 import CustomError from "../helpers/CustomError";
 import config from "../config";
@@ -43,6 +44,10 @@ export const validateRequest = (schema: ZodSchema, options?: { allowEmpty?: bool
           field: issue.path[0] ?? "unknown",
           message: issue.message,
         }));
+
+        if (req.file?.path) {
+          fs.unlinkSync(req.file.path);
+        }
         return next(new CustomError(400, "Validation failed", errors));
       }
       next(err);
