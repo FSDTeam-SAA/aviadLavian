@@ -161,7 +161,7 @@ const getAllInjuries = async ({
 
 // Update injury
 const updateInjury = async (id: string, data: IUpdateInjury) => {
-  const injury = await InjuryModel.findOne({ Id: id });
+  const injury = await InjuryModel.findById(id);
   if (!injury) throw new CustomError(404, "Injury not found");
 
   Object.assign(injury, data);
@@ -172,7 +172,7 @@ const updateInjury = async (id: string, data: IUpdateInjury) => {
 
 // Delete injury
 const deleteInjury = async (id: string) => {
-  const injury = await InjuryModel.findOneAndDelete({ Id: id });
+  const injury = await InjuryModel.findByIdAndDelete(id);
   if (!injury) throw new CustomError(404, "Injury not found");
 
   return injury;
