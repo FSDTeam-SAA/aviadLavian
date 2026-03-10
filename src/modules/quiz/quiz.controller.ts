@@ -9,12 +9,11 @@ import {
   getQuizResultService,
   getQuizProgressService,
   getQuizHistoryService,
+  getSingleQuestionResultService,
+  deleteQuizService,
 } from "./quiz.service";
 import { Types } from "mongoose";
 
-// ─────────────────────────────────────────────
-// POST /quizzes/create
-// ─────────────────────────────────────────────
 export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
   const { topicIds, quizName, mode, questionCount, timeLimitMinutes } =
     req.body;
@@ -27,9 +26,7 @@ export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
       "At least one topicId is required",
     );
   }
-  if (!quizName) {
-    return ApiResponse.sendSuccess(res, 400, "quizName is required");
-  }
+
   if (!mode || !["study", "exam"].includes(mode)) {
     return ApiResponse.sendSuccess(res, 400, "mode must be 'study' or 'exam'");
   }
@@ -53,9 +50,6 @@ export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
   return ApiResponse.sendSuccess(res, 201, "Quiz created successfully", quiz);
 });
 
-// ─────────────────────────────────────────────
-// GET /quizzes/:quizId/questions
-// ─────────────────────────────────────────────
 export const getQuizQuestions = asyncHandler(
   async (req: Request, res: Response) => {
     const { quizId } = req.params;
@@ -75,10 +69,6 @@ export const getQuizQuestions = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-// POST /quizzes/:quizId/answer
-// Study mode — per question answer
-// ─────────────────────────────────────────────
 export const studyModeAnswer = asyncHandler(
   async (req: Request, res: Response) => {
     const { quizId } = req.params;
@@ -109,16 +99,6 @@ export const studyModeAnswer = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-// PATCH /quizzes/:quizId/pause
-// Timer pause/resume
-// ─────────────────────────────────────────────
-
-// ─────────────────────────────────────────────
-// POST /quizzes/:quizId/submit
-// Exam mode: answers array পাঠাবে
-// Study mode: শুধু timeSpentSeconds পাঠাবে
-// ─────────────────────────────────────────────
 export const submitQuiz = asyncHandler(async (req: Request, res: Response) => {
   const { quizId } = req.params;
   const { timeSpentSeconds, answers } = req.body;
@@ -139,9 +119,6 @@ export const submitQuiz = asyncHandler(async (req: Request, res: Response) => {
   );
 });
 
-// ─────────────────────────────────────────────
-// GET /quizzes/:quizId/result
-// ─────────────────────────────────────────────
 export const getQuizResult = asyncHandler(
   async (req: Request, res: Response) => {
     const { quizId } = req.params;
@@ -161,10 +138,6 @@ export const getQuizResult = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-// GET /quizzes/:quizId/progress
-// Quiz এর ভেতরে progress দেখো
-// ─────────────────────────────────────────────
 export const getQuizProgress = asyncHandler(
   async (req: Request, res: Response) => {
     const { quizId } = req.params;
@@ -184,21 +157,55 @@ export const getQuizProgress = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-// GET /quizzes/history
-// ─────────────────────────────────────────────
 export const getQuizHistory = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?._id;
+    const { mode } = req.query; // optional: ?mode=exam or ?mode=study
 
-    const history = await getQuizHistoryService(new Types.ObjectId(userId));
+    const quizzes = await getQuizHistoryService(
+      new Types.ObjectId(userId),
+      mode === "exam" || mode === "study"
+        ? (mode as "exam" | "study")
+        : undefined,
+    );
 
     return ApiResponse.sendSuccess(
       res,
       200,
-      "Quiz history fetched successfully",
-      history,
-      { total: history.length },
+      "Submitted quizzes fetched successfully",
+      quizzes,
     );
   },
 );
+
+export const getSingleQuestionResult = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { quizId, questionId } = req.params;
+    const userId = req.user?._id;
+
+    const result = await getSingleQuestionResultService(
+      new Types.ObjectId(quizId as string),
+      new Types.ObjectId(userId),
+      new Types.ObjectId(questionId as string),
+    );
+
+    return ApiResponse.sendSuccess(
+      res,
+      200,
+      "Single question result fetched successfully",
+      result,
+    );
+  },
+);
+
+export const deleteQuiz = asyncHandler(async (req: Request, res: Response) => {
+  const { quizId } = req.params;
+  const userId = req.user?._id;
+
+  const result = await deleteQuizService(
+    new Types.ObjectId(quizId as string),
+    new Types.ObjectId(userId),
+  );
+
+  return ApiResponse.sendSuccess(res, 200, result.message, null);
+});

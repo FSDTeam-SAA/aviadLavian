@@ -39,7 +39,7 @@ const quizSchema = new Schema<IQuiz>(
 
     quizName: {
       type: String,
-      required: true,
+      default: () => Date.now().toString(),
       trim: true,
     },
     mode: {

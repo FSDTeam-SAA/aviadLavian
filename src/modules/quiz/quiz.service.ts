@@ -2,10 +2,6 @@ import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { QuizModel } from "./quiz.models";
 
-// ─────────────────────────────────────────────
-// Quiz create করো
-// Multiple topic থেকে shuffle করে question আনবে
-// ─────────────────────────────────────────────
 export const createQuizService = async (
   userId: Types.ObjectId,
   topicIds: string[],
@@ -18,7 +14,6 @@ export const createQuizService = async (
     throw new Error("At least one topic must be selected");
   }
 
-  // সব selected topic থেকে একসাথে question আনো
   const topicRegex = topicIds.map((id) => new RegExp(`^${id}$`, "i"));
 
   const allQuestions = await QuestionModel.find({
@@ -33,11 +28,10 @@ export const createQuizService = async (
     throw new Error("No questions available for the selected topics");
   }
 
-  // Fisher-Yates shuffle — সব topic এর question একসাথে mix হবে
-  // এতে করে কখনো এক topic এর প্রথম সব question আগে আসবে না
+
   const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
 
-  // User যত চায় তত নেবে, না থাকলে যা আছে তাই
+
   const selectedCount = Math.min(questionCount, shuffled.length);
   const selectedQuestions = shuffled.slice(0, selectedCount);
 
@@ -62,11 +56,6 @@ export const createQuizService = async (
   return quiz;
 };
 
-// ─────────────────────────────────────────────
-// Quiz এর questions আনো
-// Study mode: isCorrect দেখাবে না
-// Exam mode: isCorrect দেখাবে না
-// ─────────────────────────────────────────────
 export const getQuizQuestionsService = async (
   quizId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -132,10 +121,6 @@ export const getQuizQuestionsService = async (
   };
 };
 
-// ─────────────────────────────────────────────
-// Study Mode — per question attempt
-// একটা answer দিলেই সাথে সাথে result দেবে
-// ─────────────────────────────────────────────
 export const studyModeAnswerService = async (
   quizId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -217,14 +202,6 @@ export const studyModeAnswerService = async (
   };
 };
 
-// ─────────────────────────────────────────────
-// Timer pause/resume করো
-// ─────────────────────────────────────────────
-
-// ─────────────────────────────────────────────
-// Exam Mode — submit করো (সব answer একসাথে)
-// Study mode এও final submit হবে
-// ─────────────────────────────────────────────
 export const submitQuizService = async (
   quizId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -236,8 +213,6 @@ export const submitQuizService = async (
   if (!quiz) throw new Error("Quiz not found");
   if (quiz.status === "submitted") throw new Error("Quiz already submitted");
 
-  // Study mode এ answers array লাগবে না, already per-question save হয়ে গেছে
-  // Exam mode এ answers array লাগবে
   if (quiz.mode === "exam") {
     if (!answers || answers.length === 0) {
       throw new Error("Answers are required for exam mode");
@@ -318,7 +293,6 @@ export const submitQuizService = async (
       submittedAt: new Date(),
     });
   } else {
-    // Study mode — শুধু status আর final score update করো
     const updatedQuiz = await QuizModel.findOne({ _id: quizId, userId }).lean();
     const scorePercentage =
       updatedQuiz && updatedQuiz.totalQuestions > 0
@@ -338,10 +312,6 @@ export const submitQuizService = async (
   return await QuizModel.findById(quizId).lean();
 };
 
-// ─────────────────────────────────────────────
-// Quiz result দেখো (submit এর পর)
-// প্রতিটা question এর explanation + option stats সহ
-// ─────────────────────────────────────────────
 export const getQuizResultService = async (
   quizId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -403,9 +373,6 @@ export const getQuizResultService = async (
   };
 };
 
-// ─────────────────────────────────────────────
-// Quiz Progress — mode অনুযায়ী আলাদা stats
-// ─────────────────────────────────────────────
 export const getQuizProgressService = async (
   quizId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -413,7 +380,6 @@ export const getQuizProgressService = async (
   const quiz = await QuizModel.findOne({ _id: quizId, userId }).lean();
   if (!quiz) throw new Error("Quiz not found");
 
-  // এই user এর same mode এর সব submitted quiz আনো
   const allQuizzes = await QuizModel.find({
     userId,
     mode: quiz.mode,
@@ -462,14 +428,17 @@ export const getQuizProgressService = async (
   };
 };
 
-// ─────────────────────────────────────────────
-// User এর সব quiz history
-// ─────────────────────────────────────────────
-export const getQuizHistoryService = async (userId: Types.ObjectId) => {
-  const quizzes = await QuizModel.find({
-    userId,
-    status: "submitted",
-  })
+export const getQuizHistoryService = async (
+  userId: Types.ObjectId,
+  mode?: "exam" | "study",
+) => {
+  const filter: any = { userId, status: "submitted" };
+
+  if (mode) {
+    filter.mode = mode;
+  }
+
+  const quizzes = await QuizModel.find(filter)
     .select(
       "quizName topicIds mode totalQuestions correctAnswers incorrectAnswers scorePercentage obtainedMarks totalMarks timeSpentSeconds submittedAt",
     )
@@ -477,4 +446,51 @@ export const getQuizHistoryService = async (userId: Types.ObjectId) => {
     .lean();
 
   return quizzes;
+};
+
+export const getSingleQuestionResultService = async (
+  quizId: Types.ObjectId,
+  userId: Types.ObjectId,
+  questionId: Types.ObjectId,
+) => {
+  const quiz = await QuizModel.findOne({ _id: quizId, userId }).lean();
+  if (!quiz) throw new Error("Quiz not found");
+  if (quiz.status !== "submitted") throw new Error("Quiz not submitted yet");
+
+  // check if user attempted this question
+  const userAnswer = quiz.answers.find(
+    (a) => a.questionId.toString() === questionId.toString(),
+  );
+  if (!userAnswer) throw new Error("Question not attempted in this quiz");
+
+  const question = await QuestionModel.findById(questionId).lean();
+  if (!question) throw new Error("Question not found");
+
+  return {
+    questionId: question._id,
+    questionText: question.questionText,
+    explanation: question.explanation,
+    isCorrect: userAnswer.isCorrect,
+    selectedOptionId: userAnswer.selectedOptionId,
+    options: question.options.map((opt) => ({
+      optionId: opt._id,
+      text: opt.text,
+      isCorrect: opt.isCorrect,
+      selectedCount: opt.selectedCount ?? 0,
+    })),
+  };
+};
+
+export const deleteQuizService = async (
+  quizId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+  // check quiz exists
+  const quiz = await QuizModel.findOne({ _id: quizId, userId });
+  if (!quiz) throw new Error("Quiz not found");
+
+  // delete quiz
+  await QuizModel.deleteOne({ _id: quizId });
+
+  return { message: "Quiz deleted successfully" };
 };
