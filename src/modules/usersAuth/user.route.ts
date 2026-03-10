@@ -36,7 +36,7 @@ router.post(
 );
 
 router.post("/login", validateRequest(loginSchema), login);
-router.post("/get-all-users", authGuard, allowRole("admin"), getAllUsers);
+router.get("/get-all-users", authGuard, allowRole("admin"), getAllUsers);
 
 
 router.post("/logout", authGuard, logout);
