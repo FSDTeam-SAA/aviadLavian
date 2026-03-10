@@ -8,6 +8,9 @@ import {
   submitExamService,
   getExamHistoryService,
   getExamResultService,
+  getExamResultByQuestionIdService,
+  deleteExamService,
+  duplicateExamService,
 } from "./examattempt.service";
 import { Types } from "mongoose";
 
@@ -19,12 +22,8 @@ export const startExam = asyncHandler(async (req: Request, res: Response) => {
   const { topicId, examName, timeLimitMinutes } = req.body;
   const userId = req.user?._id;
 
-  if (!topicId || !examName) {
-    return ApiResponse.sendSuccess(
-      res,
-      400,
-      "topicId and examName are required",
-    );
+  if (!topicId) {
+    return ApiResponse.sendSuccess(res, 400, "topicId is required");
   }
 
   const exam = await startExamService(
@@ -130,3 +129,66 @@ export const getExamHistory = asyncHandler(
     );
   },
 );
+
+export const getExamResultByQuestionIdController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { examId, questionId } = req.params;
+    const userId = req.user?._id; // assuming userId is attached via auth middleware
+
+    if (
+      !Types.ObjectId.isValid(examId as string) ||
+      !Types.ObjectId.isValid(questionId as string)
+    ) {
+      return res.status(400).json({ message: "Invalid examId or questionId" });
+    }
+
+    const result = await getExamResultByQuestionIdService(
+      new Types.ObjectId(examId as string),
+      new Types.ObjectId(userId as string),
+      new Types.ObjectId(questionId as string),
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+export const deleteExamController = async (req: Request, res: Response) => {
+  const { examId } = req.params;
+  const userId = req.user?._id;
+
+  const result = await deleteExamService(
+    new Types.ObjectId(examId as string),
+    new Types.ObjectId(userId),
+  );
+
+  res.json({
+    success: true,
+    message: result.message,
+  });
+};
+
+export const duplicateExamController = async (req: Request, res: Response) => {
+  const { examId } = req.params;
+  const userId = req.user?._id;
+
+  const newExam = await duplicateExamService(
+    new Types.ObjectId(examId as string),
+    new Types.ObjectId(userId),
+  );
+
+  res.json({
+    success: true,
+    data: newExam,
+  });
+};

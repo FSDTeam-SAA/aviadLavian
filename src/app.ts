@@ -21,7 +21,7 @@ if (config.env === "development") {
 }
 
 app.use(cors({
-  origin: ["*", "http://localhost:3000", "http://localhost:3001"],
+  origin: ["*", "http://localhost:3000", "http://localhost:3001", "https://aviadlavian-website-wi83.vercel.app","https://aviadlavian-dashboard.vercel.app"],
   credentials: true
 }));
 app.use(cookieParser());

@@ -3,17 +3,22 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 
 import { Types } from "mongoose";
-import { attemptQuestionBankService, getQuestionDetailsService, getQuestionsByTopicService } from "./questionbank.service";
+import {
+  attemptQuestionBankService,
+  getAttemptByTopicService,
+  getQuestionDetailsService,
+  getQuestionsByTopicService,
+} from "./questionbank.service";
 
-// ─────────────────────────────────────────────
-// GET /question-bank/topics/:topicId/questions
-// Topic select করলে সব question আসবে
-// ─────────────────────────────────────────────
 export const getQuestionsByTopic = asyncHandler(
   async (req: Request, res: Response) => {
     const { topicId } = req.params;
+    const userId = req.user?._id;
 
-    const questions = await getQuestionsByTopicService(topicId as string);
+    const questions = await getQuestionsByTopicService(
+      topicId as string,
+      userId as string,
+    );
 
     return ApiResponse.sendSuccess(
       res,
@@ -25,10 +30,6 @@ export const getQuestionsByTopic = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-// POST /question-bank/questions/:questionId/attempt
-// User একটা question attempt করবে
-// ─────────────────────────────────────────────
 export const attemptQuestion = asyncHandler(
   async (req: Request, res: Response) => {
     const { questionId } = req.params;
@@ -56,16 +57,14 @@ export const attemptQuestion = asyncHandler(
   },
 );
 
-// ─────────────────────────────────────────────
-// GET /question-bank/questions/:questionId
-// Specific question এর details + explanation + option stats
-// ─────────────────────────────────────────────
 export const getQuestionDetails = asyncHandler(
   async (req: Request, res: Response) => {
     const { questionId } = req.params;
+    const userId = req.user?._id;
 
     const question = await getQuestionDetailsService(
-      new Types.ObjectId(questionId as string ),
+      new Types.ObjectId(questionId as string),
+      new Types.ObjectId(userId),
     );
 
     return ApiResponse.sendSuccess(
@@ -76,3 +75,33 @@ export const getQuestionDetails = asyncHandler(
     );
   },
 );
+
+export const getAttemptByTopicController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { topicId } = req.params;
+    const userId = req.user?._id; // assume userId is attached by auth middleware
+
+    if (!topicId) {
+      return res.status(400).json({ message: "topicId is required" });
+    }
+
+    const result = await getAttemptByTopicService(
+      topicId as string,
+      new Types.ObjectId(userId),
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (err: any) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};

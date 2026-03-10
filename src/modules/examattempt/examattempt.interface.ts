@@ -28,7 +28,7 @@ export interface IExamAttempt {
   timeLimitMinutes: number; // default 120
   timeSpentSeconds: number; // কতক্ষণ লেগেছে
 
-  status: "ongoing" | "submitted";
+  status: "ongoing" | "submitted" | "in-progress";
   startedAt: Date;
   submittedAt?: Date;
 }

@@ -1,18 +1,14 @@
 import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { ExamAttemptModel } from "./examattempt.models";
+import { userModel } from "../usersAuth/user.models";
 
-// ─────────────────────────────────────────────
-// নতুন exam শুরু করো
-// Topic থেকে 60 টা random question নেবে
-// ─────────────────────────────────────────────
 export const startExamService = async (
   userId: Types.ObjectId,
   topicId: string,
   examName: string,
   timeLimitMinutes: number = 120,
 ) => {
-  // Topic থেকে সব available question আনো
   const allQuestions = await QuestionModel.find({
     topicId: { $regex: `^${topicId}$`, $options: "i" },
     isDeleted: false,
@@ -27,10 +23,8 @@ export const startExamService = async (
     throw new Error("Not enough questions available for this topic");
   }
 
-  // 60 টার বেশি থাকলে random 60 টা নাও, কম থাকলে যা আছে তাই নাও
   const questionLimit = Math.min(60, allQuestions.length);
 
-  // Fisher-Yates shuffle করে random নেওয়া
   const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
   const selectedQuestions = shuffled.slice(0, questionLimit);
 
@@ -54,10 +48,6 @@ export const startExamService = async (
   return exam;
 };
 
-// ─────────────────────────────────────────────
-// Exam এর সব question আনো (answer ছাড়া)
-// Exam চলাকালীন এই API call হবে
-// ─────────────────────────────────────────────
 export const getExamQuestionsService = async (
   examId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -75,14 +65,12 @@ export const getExamQuestionsService = async (
     throw new Error("This exam has already been submitted");
   }
 
-  // Question গুলো আনো কিন্তু isCorrect field hide করো
   const questions = await QuestionModel.find({
     _id: { $in: exam.questions },
   })
     .select("-__v")
     .lean();
 
-  // Serial number যোগ করো এবং isCorrect hide করো
   const questionsWithSerial = questions.map((question, index) => ({
     serialNumber: index + 1,
     ...question,
@@ -90,7 +78,6 @@ export const getExamQuestionsService = async (
       _id: opt._id,
       text: opt.text,
       selectedCount: opt.selectedCount,
-      // isCorrect intentionally hide করা হয়েছে exam mode এ
     })),
   }));
 
@@ -107,11 +94,6 @@ export const getExamQuestionsService = async (
     questions: questionsWithSerial,
   };
 };
-
-// ─────────────────────────────────────────────
-// Exam submit করো
-// সব answer একসাথে পাঠাবে
-// ─────────────────────────────────────────────
 export const submitExamService = async (
   examId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -131,12 +113,10 @@ export const submitExamService = async (
     throw new Error("This exam has already been submitted");
   }
 
-  // সব question এর correct answer আনো
   const questions = await QuestionModel.find({
     _id: { $in: exam.questions },
   }).lean();
 
-  // Question গুলো map করো দ্রুত lookup এর জন্য
   const questionMap = new Map(questions.map((q) => [q._id.toString(), q]));
 
   let correctAnswers = 0;
@@ -144,18 +124,15 @@ export const submitExamService = async (
   let obtainedMarks = 0;
   let attemptedQuestions = 0;
 
-  // প্রতিটা question এর answer process করো
   const processedAnswers = exam.questions.map((questionId: Types.ObjectId) => {
     const question = questionMap.get(questionId.toString());
 
-    // User এই question এর জন্য কোন answer দিয়েছে
     const userAnswer = answers.find(
       (a) => a.questionId === questionId.toString(),
     );
 
     const selectedOptionId = userAnswer?.selectedOptionId || null;
 
-    // Answer না দিলে skip
     if (!selectedOptionId || !question) {
       return {
         questionId,
@@ -166,7 +143,6 @@ export const submitExamService = async (
 
     attemptedQuestions++;
 
-    // Correct option খুঁজে বের করো
     const selectedOption = question.options.find(
       (opt) => opt._id.toString() === selectedOptionId,
     );
@@ -180,7 +156,6 @@ export const submitExamService = async (
       incorrectAnswers++;
     }
 
-    // Question এর stats update করো
     QuestionModel.findOneAndUpdate(
       { _id: questionId, "options._id": selectedOptionId },
       {
@@ -204,7 +179,6 @@ export const submitExamService = async (
       ? Math.round((correctAnswers / exam.totalQuestions) * 100)
       : 0;
 
-  // Exam update করো
   const updatedExam = await ExamAttemptModel.findByIdAndUpdate(
     examId,
     {
@@ -224,10 +198,6 @@ export const submitExamService = async (
   return updatedExam;
 };
 
-// ─────────────────────────────────────────────
-// Submit এর পর full result দেখো
-// প্রতিটা question এর explanation + option stats সহ
-// ─────────────────────────────────────────────
 export const getExamResultService = async (
   examId: Types.ObjectId,
   userId: Types.ObjectId,
@@ -245,19 +215,19 @@ export const getExamResultService = async (
     throw new Error("Exam has not been submitted yet");
   }
 
-  // সব question এর details আনো
   const questions = await QuestionModel.find({
     _id: { $in: exam.questions },
   }).lean();
 
   const questionMap = new Map(questions.map((q) => [q._id.toString(), q]));
 
-  // Answer map করো
   const answerMap = new Map(
     exam.answers.map((a: any) => [a.questionId.toString(), a]),
   );
 
-  // প্রতিটা question এর সাথে user answer + explanation যোগ করো
+  // Total user count
+  const allUserCount = await userModel.countDocuments({});
+
   const detailedResults = exam.questions.map((questionId: any, index: any) => {
     const question = questionMap.get(questionId.toString());
     const userAnswer = answerMap.get(questionId.toString());
@@ -269,12 +239,21 @@ export const getExamResultService = async (
       explanation: question?.explanation,
       selectedOptionId: (userAnswer as any)?.selectedOptionId ?? null,
       isCorrect: (userAnswer as any)?.isCorrect ?? false,
-      options: question?.options.map((opt) => ({
-        _id: opt._id,
-        text: opt.text,
-        isCorrect: opt.isCorrect,
-        selectedCount: opt.selectedCount ?? 0,
-      })),
+      options: question?.options.map((opt) => {
+        const selectedCount = opt.selectedCount ?? 0;
+        const selectedPercentage =
+          allUserCount > 0
+            ? Math.round((selectedCount / allUserCount) * 100)
+            : 0;
+
+        return {
+          _id: opt._id,
+          text: opt.text,
+          isCorrect: opt.isCorrect,
+          selectedCount,
+          selectedPercentage,
+        };
+      }),
     };
   });
 
@@ -298,10 +277,6 @@ export const getExamResultService = async (
     detailedResults,
   };
 };
-
-// ─────────────────────────────────────────────
-// User এর সব exam history দেখো
-// ─────────────────────────────────────────────
 export const getExamHistoryService = async (userId: Types.ObjectId) => {
   const exams = await ExamAttemptModel.find({
     userId,
@@ -314,4 +289,116 @@ export const getExamHistoryService = async (userId: Types.ObjectId) => {
     .lean();
 
   return exams;
+};
+
+export const getExamResultByQuestionIdService = async (
+  examId: Types.ObjectId,
+  userId: Types.ObjectId,
+  questionId: Types.ObjectId,
+) => {
+  const exam = await ExamAttemptModel.findOne({
+    _id: examId,
+    userId,
+  }).lean();
+
+  if (!exam) throw new Error("Exam not found");
+  if (exam.status !== "submitted")
+    throw new Error("Exam has not been submitted yet");
+
+  const question = await QuestionModel.findById(questionId).lean();
+  if (!question) throw new Error("Question not found");
+
+  const userAnswer = exam.answers.find(
+    (a: any) => a.questionId.toString() === questionId.toString(),
+  );
+
+  const allUserCount = await userModel.countDocuments({});
+
+  const options = question.options.map((opt) => {
+    const selectedCount = opt.selectedCount ?? 0;
+    const selectedPercentage =
+      allUserCount > 0 ? Math.round((selectedCount / allUserCount) * 100) : 0;
+
+    return {
+      _id: opt._id,
+      text: opt.text,
+      isCorrect: opt.isCorrect,
+      selectedCount,
+      selectedPercentage,
+    };
+  });
+
+  return {
+    examId: exam._id,
+    examName: exam.examName,
+    topicId: exam.topicId,
+    questionId: question._id,
+    questionText: question.questionText,
+    explanation: question.explanation,
+    selectedOptionId: userAnswer?.selectedOptionId ?? null,
+    isCorrect: userAnswer?.isCorrect ?? false,
+    options,
+    marks: question.marks ?? 1,
+  };
+};
+export const deleteExamService = async (
+  examId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+  const exam = await ExamAttemptModel.findOne({
+    _id: examId,
+    userId,
+  });
+
+  if (!exam) {
+    throw new Error("Exam not found");
+  }
+
+  await ExamAttemptModel.findByIdAndDelete(examId);
+
+  return {
+    message: "Exam deleted successfully",
+  };
+};
+export const duplicateExamService = async (
+  examId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+  const oldExam = await ExamAttemptModel.findOne({
+    _id: examId,
+    userId,
+  }).lean();
+
+  if (!oldExam) {
+    throw new Error("Exam not found 2");
+  }
+
+  // same questions (no shuffle)
+  const questionIds = oldExam.questions;
+
+  const questions = await QuestionModel.find({
+    _id: { $in: questionIds },
+  })
+    .select("marks")
+    .lean();
+
+  const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+
+  // delete old exam
+  await ExamAttemptModel.findByIdAndDelete(examId);
+
+  // create new exam with same question order
+  const newExam = await ExamAttemptModel.create({
+    userId,
+    topicId: oldExam.topicId,
+    examName: oldExam.examName,
+    questions: questionIds,
+    totalQuestions: questionIds.length,
+    totalMarks,
+    timeLimitMinutes: oldExam.timeLimitMinutes,
+    startedAt: new Date(),
+    status: "ongoing",
+  });
+
+  return newExam;
 };

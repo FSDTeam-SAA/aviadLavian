@@ -70,9 +70,10 @@ export const login = asyncHandler(async (req, res) => {
   });
 });
 
+//get all users by admin
 export const getAllUsers = asyncHandler(async (req, res) => {
-  const users = await userService.getAllUsers();
-  ApiResponse.sendSuccess(res, 200, "Users fetched successfully", users);
+  const { data , meta} = await userService.getAllUsers(req);
+  ApiResponse.sendSuccess(res, 200, "Users fetched successfully", data, meta);
 });
 
 //get single user

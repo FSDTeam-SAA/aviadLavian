@@ -2,36 +2,39 @@ import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { QuestionBankAttemptModel } from "./questionbank.models";
 
-// ─────────────────────────────────────────────
-// Topic select করলে সব question আসবে (sequential number সহ)
-// ─────────────────────────────────────────────
-export const getQuestionsByTopicService = async (topicId: string) => {
+export const getQuestionsByTopicService = async (
+  topicId: string,
+  userId: string,
+) => {
   const questions = await QuestionModel.find({
     topicId: { $regex: `^${topicId}$`, $options: "i" },
     isDeleted: false,
     isHidden: false,
-  })
-    .select("-__v")
-    .lean();
+  }).lean();
 
-  // প্রতিটা question এ sequential number যোগ করছি
+  const attemptedQuestions = await QuestionBankAttemptModel.find({
+    userId,
+    topicId: { $regex: `^${topicId}$`, $options: "i" },
+  }).lean();
+
+  const attemptedSet = new Set(
+    attemptedQuestions.map((q) => q.questionId.toString()),
+  );
+
   const questionsWithSerial = questions.map((question, index) => ({
-    serialNumber: index + 1,
     ...question,
+    serialNumber: index + 1,
+    isAttempted: attemptedSet.has(question._id.toString()),
   }));
 
   return questionsWithSerial;
 };
 
-// ─────────────────────────────────────────────
-// User একটা question attempt করবে
-// ─────────────────────────────────────────────
 export const attemptQuestionBankService = async (
   userId: Types.ObjectId,
   questionId: Types.ObjectId,
   selectedOptionId: Types.ObjectId,
 ) => {
-  // Question খুঁজে বের করো
   const question = await QuestionModel.findOne({
     _id: questionId,
     isDeleted: false,
@@ -42,7 +45,6 @@ export const attemptQuestionBankService = async (
     throw new Error("Question not found");
   }
 
-  // Selected option টা question এ আছে কিনা check করো
   const selectedOption = question.options.find(
     (opt) => opt._id.toString() === selectedOptionId.toString(),
   );
@@ -53,8 +55,6 @@ export const attemptQuestionBankService = async (
 
   const isCorrect = selectedOption.isCorrect;
 
-  // Question এর totalAttempts ও correctAttempts update করো
-  // এবং selected option এর selectedCount বাড়াও
   await QuestionModel.findOneAndUpdate(
     { _id: questionId, "options._id": selectedOptionId },
     {
@@ -66,15 +66,18 @@ export const attemptQuestionBankService = async (
     },
   );
 
-  // Attempt save করো
+  const topicId = await QuestionModel.findById(questionId).select("topicId");
+  console.log(topicId!.topicId, "poiwjetgopuj0e42");
+
   const attempt = await QuestionBankAttemptModel.create({
     userId,
     questionId,
     selectedOptionId,
     isCorrect,
+    topicId: topicId!.topicId,
+    isAttempted: true,
   });
 
-  // Response এ question এর explanation ও option stats পাঠাও
   const updatedQuestion = await QuestionModel.findById(questionId).lean();
 
   return {
@@ -91,11 +94,10 @@ export const attemptQuestionBankService = async (
   };
 };
 
-// ─────────────────────────────────────────────
-// একটা specific question এর details দেখো
-// (explanation + option stats)
-// ─────────────────────────────────────────────
-export const getQuestionDetailsService = async (questionId: Types.ObjectId) => {
+export const getQuestionDetailsService = async (
+  questionId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
   const question = await QuestionModel.findOne({
     _id: questionId,
     isDeleted: false,
@@ -106,13 +108,111 @@ export const getQuestionDetailsService = async (questionId: Types.ObjectId) => {
     throw new Error("Question not found");
   }
 
+  const isAttempted = await QuestionBankAttemptModel.findOne({
+    userId,
+    questionId,
+  });
+
+  const allQuestionsInTopic = await QuestionModel.find({
+    topicId: question.topicId,
+    isDeleted: false,
+    isHidden: false,
+  })
+    .select("_id")
+    .sort({ createdAt: 1 })
+    .lean();
+
+  const currentIndex = allQuestionsInTopic.findIndex(
+    (q) => q._id.toString() === questionId.toString(),
+  );
+
+  const nextQuestionId =
+    currentIndex !== -1 && currentIndex < allQuestionsInTopic.length - 1
+      ? allQuestionsInTopic[currentIndex + 1]!._id
+      : null;
+
   return {
     ...question,
+    isAttempted: !!isAttempted,
+    nextQuestionId,
     optionStats: question.options.map((opt) => ({
       optionId: opt._id,
       text: opt.text,
       selectedCount: opt.selectedCount ?? 0,
       isCorrect: opt.isCorrect,
     })),
+  };
+};
+
+export const getAttemptByTopicService = async (
+  topicId: string,
+  userId: Types.ObjectId,
+) => {
+  // all questions of this topic
+  const questions = await QuestionModel.find({
+    topicId: { $regex: `^${topicId}$`, $options: "i" },
+    isDeleted: false,
+    isHidden: false,
+  }).lean();
+
+  const totalQuestions = questions.length;
+
+  // all attempts by this user in this topic
+  const attempts = await QuestionBankAttemptModel.find({
+    userId,
+    topicId: { $regex: `^${topicId}$`, $options: "i" },
+  }).lean();
+
+  const attemptedSet = new Set(attempts.map((a) => a.questionId.toString()));
+
+  const attemptedCount = attempts.length;
+
+  // completion percentage
+  const completionPercentage =
+    totalQuestions > 0
+      ? Math.round((attemptedCount / totalQuestions) * 100)
+      : 0;
+
+  // correct / incorrect stats
+  const correctCount = attempts.filter((a) => a.isCorrect).length;
+  const incorrectCount = attempts.filter((a) => !a.isCorrect).length;
+
+  const correctPercentage =
+    attemptedCount > 0 ? Math.round((correctCount / attemptedCount) * 100) : 0;
+
+  const incorrectPercentage =
+    attemptedCount > 0
+      ? Math.round((incorrectCount / attemptedCount) * 100)
+      : 0;
+
+  // questions with attempt status
+  const questionsWithDetails = questions.map((question, index) => ({
+    serialNumber: index + 1,
+    _id: question._id,
+    questionText: question.questionText,
+    explanation: question.explanation,
+    isAttempted: attemptedSet.has(question._id.toString()),
+    options: question.options.map((opt) => ({
+      optionId: opt._id,
+      text: opt.text,
+      selectedCount: opt.selectedCount ?? 0,
+      isCorrect: opt.isCorrect,
+    })),
+  }));
+
+  return {
+    topicId,
+    totalQuestions,
+    attemptedCount,
+    completionPercentage,
+
+    stats: {
+      correctCount,
+      incorrectCount,
+      correctPercentage,
+      incorrectPercentage,
+    },
+
+    questions: questionsWithDetails,
   };
 };
