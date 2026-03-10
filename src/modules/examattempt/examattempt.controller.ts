@@ -9,6 +9,8 @@ import {
   getExamHistoryService,
   getExamResultService,
   getExamResultByQuestionIdService,
+  deleteExamService,
+  duplicateExamService,
 } from "./examattempt.service";
 import { Types } from "mongoose";
 
@@ -160,4 +162,33 @@ export const getExamResultByQuestionIdController = async (
       message: err.message || "Server error",
     });
   }
+};
+export const deleteExamController = async (req: Request, res: Response) => {
+  const { examId } = req.params;
+  const userId = req.user?._id;
+
+  const result = await deleteExamService(
+    new Types.ObjectId(examId as string),
+    new Types.ObjectId(userId),
+  );
+
+  res.json({
+    success: true,
+    message: result.message,
+  });
+};
+
+export const duplicateExamController = async (req: Request, res: Response) => {
+  const { examId } = req.params;
+  const userId = req.user?._id;
+
+  const newExam = await duplicateExamService(
+    new Types.ObjectId(examId as string),
+    new Types.ObjectId(userId),
+  );
+
+  res.json({
+    success: true,
+    data: newExam,
+  });
 };
