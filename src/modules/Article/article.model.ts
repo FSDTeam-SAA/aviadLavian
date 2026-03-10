@@ -10,7 +10,8 @@ const articleSchema = new Schema<IArticle>(
         },
         topicIds: [
             {
-                type: Schema.Types.Mixed,
+                type: Schema.Types.ObjectId,
+                ref: "Injury",
                 required: true,
             },
         ],

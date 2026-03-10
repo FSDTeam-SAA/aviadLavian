@@ -35,7 +35,7 @@ const createArticle = async (
 };
 
 const getSingleArticle = async (id: string) => {
-    const article = await ArticleModel.findById(id);
+    const article = await ArticleModel.findById(id).populate('topicIds'); // Now topicIds references Injury
     if (!article) throw new CustomError(404, "Article not found");
     return article;
 };
@@ -62,7 +62,7 @@ const getAllArticles = async (params: IGetAllArticlesParams) => {
 
     const [articles, total] = await Promise.all([
             ArticleModel.find(query)
-                .populate('topicIds')
+                .populate('topicIds') // Now topicIds references Injury
                 .sort(sortObj)
                 .skip(skip)
                 .limit(pageLimit),
