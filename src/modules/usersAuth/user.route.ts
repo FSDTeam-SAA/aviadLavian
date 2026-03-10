@@ -12,6 +12,8 @@ import {
   getStudentProgress,
   getAllUsers,
   getMyProfile,
+  updateStatus,
+  getSingleUser,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -22,6 +24,7 @@ import {
   loginSchema,
   registerUserSchema,
   resetPasswordSchema,
+  updateStatusSchema,
   updateUserSchema,
 
 } from "./user.validation";
@@ -37,6 +40,7 @@ router.post(
 
 router.post("/login", validateRequest(loginSchema), login);
 router.post("/get-all-users", authGuard, allowRole("admin"), getAllUsers);
+router.get("/get-single-user/:userId", authGuard, allowRole("admin"), getSingleUser);
 
 
 router.post("/logout", authGuard, logout);
@@ -72,7 +76,8 @@ router
     validateRequest(updateUserSchema),
     updateUser,
   );
-// Route
+// Update status
+router.route("/update-status/:userId").patch(authGuard, allowRole("admin"), validateRequest(updateStatusSchema), updateStatus );
 router.patch(
   "/change-password",
   authGuard,

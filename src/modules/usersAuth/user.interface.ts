@@ -5,7 +5,7 @@ export enum role {
 
 export enum status {
   active = "active",
-  inactive = "inactive",
+  inactive = "deactive",
   blocked = "blocked",
 }
 export interface UpdateUserPayload {

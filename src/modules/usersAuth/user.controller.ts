@@ -75,9 +75,21 @@ export const getAllUsers = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "Users fetched successfully", users);
 });
 
+//get single user
+export const getSingleUser = asyncHandler(async (req, res) => {
+  const user = await userService.getSingleUser(req);
+  ApiResponse.sendSuccess(res, 200, "User fetched successfully", user);
+});
+
 export const getMyProfile = asyncHandler(async (req, res) => {
   const user = await userService.getMyProfile(req);
   ApiResponse.sendSuccess(res, 200, "User fetched successfully", user);
+});
+
+//update status by admin account atatus
+export const updateStatus = asyncHandler(async (req, res) => {
+  const result = await userService.updateStatus(req);
+  ApiResponse.sendSuccess(res, 200, "User status updated successfully", result);
 });
 
 export const updateUser = asyncHandler(async (req, res) => {

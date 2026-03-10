@@ -53,7 +53,7 @@ export const userService = {
   },
 
   async login(email: string, password: string) {
-    const user = await userModel.findOne({ email });
+    const user = await userModel.findOne({ email, isDeleted: false });
     if (!user) throw new CustomError(400, "user not found");
 
     const isPasswordMatch = await bcryptjs.compare(password, user.password);
@@ -74,13 +74,20 @@ export const userService = {
     return users;
   },
 
+  //get single user
+  async getSingleUser(req: any) {
+    const { userId } = req.params
+    const user = await userModel.findOne({ _id: userId }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email isVerified");
+    return user;
+  },
+
   //grt my profile
   async getMyProfile(req: any) {
     const user = await userModel.findOne({ _id: req.user._id }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     return user;
   },
 
-  //update user
+  //update user profile as my profile
   async updateUser(req: any) {
 
     const image = req.file as Express.Multer.File;
@@ -111,6 +118,16 @@ export const userService = {
   },
 
 
+  //update status any user by admin only
+  async updateStatus(req: any) {
+    const {userId} = req.params
+    const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+
+    console.log(user);
+    
+    if (!user) throw new CustomError(400, "User not found");
+    return user
+  },
 
 
   // Service
