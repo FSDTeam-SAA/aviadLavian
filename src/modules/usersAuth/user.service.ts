@@ -4,7 +4,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import CustomError from "../../helpers/CustomError";
 import config from "../../config";
-import { uploadCloudinary } from "../../helpers/cloudinary";
+import { deleteCloudinary, uploadCloudinary } from "../../helpers/cloudinary";
 import { IUser, UpdateUserPayload } from "./user.interface";
 import bcryptjs from "bcryptjs";
 // import { redisTokenService } from "../../helpers/redisTokenService";
@@ -70,59 +70,49 @@ export const userService = {
 
   //get all users
   async getAllUsers() {
-    const users = await userModel.find({role:"user"}).select("email country FirstName LastName profileImage role");
+    const users = await userModel.find({ role: "user" }).select("email country FirstName LastName profileImage role");
     return users;
   },
 
-  async updateUser(email: string, payload: UpdateUserPayload, files?: any) {
-    const user = await userModel.findOne({ email });
-
-    if (!user) {
-      throw new CustomError(404, "User not found");
-    }
-
-    let emailChanged = false;
-
-    if (payload.FirstName) user.FirstName = payload.FirstName;
-    if (payload.LastName) user.LastName = payload.LastName;
-    if (payload.profession) user.profession = payload.profession;
-    if (payload.country) user.country = payload.country;
-
-    // change email
-    if (payload.email && payload.email !== user.email) {
-      const exists = await userModel.findOne({
-        email: payload.email,
-      });
-
-      if (exists) {
-        throw new CustomError(409, "Email already in use");
-      }
-
-      user.email = payload.email;
-      emailChanged = true;
-
-      // force logout
-      user.refreshToken = null;
-    }
-
-    if (files?.image?.length > 0) {
-      const uploaded = await uploadCloudinary(files.image[0].path);
-      if (uploaded) {
-        user.profileImage.push(uploaded);
-      }
-    }
-
-    await user.save();
-
-    return {
-      user: {
-        name: user.FirstName + " " + user.LastName,
-        email: user.email,
-        profileImage: user.profileImage,
-      },
-      emailChanged,
-    };
+  //grt my profile
+  async getMyProfile(req: any) {
+    const user = await userModel.findOne({ _id: req.user._id }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+    return user;
   },
+
+  //update user
+  async updateUser(req: any) {
+
+    const image = req.file as Express.Multer.File;
+
+
+    const user = await userModel.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+    if (!user) throw new CustomError(400, "User not found");
+    
+    if (image) {
+      //delete old image
+      if (user.profileImage?.public_id) {
+        await deleteCloudinary(user.profileImage.public_id);
+      }
+
+      //upload to cloudinary
+      const imageAsset = await uploadCloudinary(image.path);
+      if (imageAsset) {
+        user.profileImage = {
+          public_id: imageAsset.public_id,
+          secure_url: imageAsset.secure_url
+        };
+        await user.save();
+      }
+
+    }
+    return user
+
+  },
+
+
+
+
   // Service
   async changePassword(
     email: string,

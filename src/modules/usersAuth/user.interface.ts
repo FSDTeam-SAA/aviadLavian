@@ -15,6 +15,9 @@ export interface UpdateUserPayload {
   profession?: string;
   country?: string;
 }
+
+
+
 export interface IUser extends Document {
   _id: string;
   FirstName: string;
@@ -23,15 +26,18 @@ export interface IUser extends Document {
   password: string;
   role: string;
   profession: string;
-  profileImage: [
-    {
-      public_id: string;
-      secure_url: string;
-    },
-  ];
+  profileImage:
+  {
+    public_id: string;
+    secure_url: string;
+  };
+  dateOfBirth: Date;
   status: status;
   country: string;
-  addressIds?: string[];
+  address: string;
+  instituteName: string;
+  IdNumber: string;
+  registrationNumber: string;
   passwordResetToken: string;
   passwordResetExpire: Date | null;
   isVerified: boolean;

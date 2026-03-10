@@ -11,6 +11,7 @@ import {
   updatePassword,
   getStudentProgress,
   getAllUsers,
+  getMyProfile,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -22,6 +23,7 @@ import {
   registerUserSchema,
   resetPasswordSchema,
   updateUserSchema,
+
 } from "./user.validation";
 import { permission } from "../../middleware/permission.middleware";
 
@@ -60,11 +62,13 @@ router.post(
   generateAccessToken,
 );
 
+router.route("/get-my-profile").get(authGuard, getMyProfile);
+
 router
   .route("/update-user")
   .patch(
     authGuard,
-    upload.fields([{ name: "image", maxCount: 1 }]),
+    upload.single("image"),
     validateRequest(updateUserSchema),
     updateUser,
   );
