@@ -14,6 +14,7 @@ import {
   getMyProfile,
   getSingleUser,
   updateUserByID,
+  deleteUserByID,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -47,6 +48,7 @@ router.post("/logout", authGuard, logout);
 
 //delete user
 router.route("/delete-account").delete(authGuard, getSingleUser);
+router.route("/delete-account/:userId").delete(authGuard, allowRole("admin"), deleteUserByID);
 
 router.post(
   "/forget-password",
