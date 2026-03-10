@@ -52,9 +52,9 @@ export const resetPasswordSchema = z
 
 export const updateUserSchema = z
   .object({
-    firstName: z.string().min(1, "First name cannot be empty").optional(),
+    FirstName: z.string().min(1, "First name cannot be empty").optional(),
 
-    lastName: z.string().min(1, "Last name cannot be empty").optional(),
+    LastName: z.string().min(1, "Last name cannot be empty").optional(),
 
     country: z.string().min(1, "Country cannot be empty").optional(),
 
@@ -71,6 +71,7 @@ export const updateUserSchema = z
       .string()
       .min(1, "Registration number cannot be empty")
       .optional(),
+    status: z.enum(["active", "inactive", "blocked"]).optional(),
 
     dateOfBirth: z.coerce
       .date().refine((value) => {
@@ -103,3 +104,15 @@ export const changePasswordSchema = z
     message: "New password must be different from current password",
     path: ["newPassword"],
   });
+
+  //update user by admin using id
+  export const updateUserByIDSchema = z
+  .object({
+    FirstName: z.string().min(1, "First name cannot be empty").optional(),
+
+    LastName: z.string().min(1, "Last name cannot be empty").optional(),
+
+    country: z.string().min(1, "Country cannot be empty").optional(),
+    status: z.enum(["active", "inactive", "blocked"]).optional(),
+  })
+  .strict();  

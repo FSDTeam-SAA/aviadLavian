@@ -71,21 +71,25 @@ export const userService = {
 
   //get all users
   async getAllUsers(req: any) {
-    const { page: pageParam, limit: limitParam, search, filter } = req.query
+    const { page: pageParam, limit: limitParam, search, filter } = req.query;
 
     const { page, limit, skip } = paginationHelper(pageParam, limitParam);
 
-    //now implement search and filter
-    const query: any = {};
+    const query: any = { role: "user" };
+    const andConditions: any[] = [];
+
+    //serach
     if (search) {
-      query.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
+      andConditions.push({
+        $or: [
+          { FirstName: { $regex: search, $options: "i" } },
+          { LastName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      });
     }
 
-    // filter by status and isVerified
+    //filter
     const allowedStatus = ["active", "deactive", "blocked"];
     const allowedBoolean = ["true", "false"];
 
@@ -100,7 +104,6 @@ export const userService = {
         conditions.push({ isVerified: filter === "true" });
       }
 
-      // if nothing matched
       if (conditions.length === 0) {
         throw new CustomError(
           400,
@@ -108,68 +111,126 @@ export const userService = {
         );
       }
 
-      query.$or = conditions;
+      andConditions.push({ $or: conditions });
     }
 
-    const users = await userModel.find({ role: "user" , ...query}).skip(skip).limit(limit).select("email country FirstName LastName profileImage role");
+    if (andConditions.length) {
+      query.$and = andConditions;
+    }
 
-    //count users
-    const totalUsers = await userModel.countDocuments({ role: "user" , ...query});
-    return {data: users,meta:{page,limit,totalUsers}};
+    const users = await userModel
+      .find(query)
+      .skip(skip)
+      .limit(limit)
+      .select("email country FirstName LastName profileImage role");
+
+    const totalUsers = await userModel.countDocuments(query);
+
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    return {
+      data: users,
+      meta: {
+        page,
+        limit,
+        totalUsers,
+        totalPages,
+      },
+    };
   },
 
   //get single user
   async getSingleUser(req: any) {
     const { userId } = req.params
-    const user = await userModel.findOne({ _id: userId }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email isVerified");
+    const user = await userModel.findOne({ _id: userId }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email isVerified");
     return user;
   },
 
   //grt my profile
   async getMyProfile(req: any) {
-    const user = await userModel.findOne({ _id: req.user._id }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+    const user = await userModel.findOne({ _id: req.user._id }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     return user;
   },
 
   //update user profile as my profile
   async updateUser(req: any) {
-
     const image = req.file as Express.Multer.File;
 
+    const role = req.user?.role;
 
-    const user = await userModel.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+    // role-based allowed status
+    const userAllowedStatus = ["active", "deactive"];
+    const adminAllowedStatus = ["active", "deactive", "blocked"];
+
+    if (req.body.status) {
+      const allowedStatus =
+        role === "admin" ? adminAllowedStatus : userAllowedStatus;
+
+      if (!allowedStatus.includes(req.body.status)) {
+        throw new CustomError(
+          403,
+          `Invalid status. Allowed values: ${allowedStatus.join(", ")}`
+        );
+      }
+    }
+
+    const user = await userModel
+      .findOneAndUpdate(
+        { _id: req.user._id },
+        req.body,
+        { new: true }
+      )
+      .select(
+        "FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status"
+      );
+
     if (!user) throw new CustomError(400, "User not found");
 
     if (image) {
-      //delete old image
       if (user.profileImage?.public_id) {
         await deleteCloudinary(user.profileImage.public_id);
       }
 
-      //upload to cloudinary
       const imageAsset = await uploadCloudinary(image.path);
+
       if (imageAsset) {
         user.profileImage = {
           public_id: imageAsset.public_id,
-          secure_url: imageAsset.secure_url
+          secure_url: imageAsset.secure_url,
         };
+
         await user.save();
       }
-
     }
-    return user
 
+    return user;
   },
 
-
   //update status any user by admin only
-  async updateStatus(req: any) {
+  async updateUserByID(req: any) {
     const { userId } = req.params
-    const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+const image = req.file as Express.Multer.File;
 
-    console.log(user);
-
+    const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     if (!user) throw new CustomError(400, "User not found");
+
+    if (image) {
+      if (user.profileImage?.public_id) {
+        await deleteCloudinary(user.profileImage.public_id);
+      }
+
+      const imageAsset = await uploadCloudinary(image.path);
+
+      if (imageAsset) {
+        user.profileImage = {
+          public_id: imageAsset.public_id,
+          secure_url: imageAsset.secure_url,
+        };
+
+        await user.save();
+      }
+    }
+
     return user
   },
 
@@ -224,6 +285,13 @@ export const userService = {
     //     // Don't throw error - logout should still succeed
     //   }
     // }
+  },
+
+
+  //delete user
+  async deleteUser(req: any) {
+    const user = await userModel.findOneAndDelete({ _id: req.user._id });
+    return user;
   },
 
   async forgetPassword(email: string) {
