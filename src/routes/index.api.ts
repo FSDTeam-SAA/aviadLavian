@@ -12,6 +12,7 @@ import questionBankRoutes from "../modules/questionbank/questionbank.routes";
 import examAttemptRoutes from "../modules/examattempt/examattempt.routes";
 import quizRoutes from "../modules/quiz/quiz.routes";
 import { learningPlanRoute } from "../modules/learningplan/learningplan.route";
+import { ArticleAnnotationRoute } from "../modules/ArticleAnnotation/articleAnnotation.route";
 
 router.use("/user", userRoute);
 router.use("/flashcard", flashcardRoute);
@@ -20,6 +21,7 @@ router.use("/question", questionRoute);
 
 router.use("/injury", injuryRoute);
 router.use("/article", articleRoutes);
+router.use("/article-annotations", ArticleAnnotationRoute);
 router.use("/learning-plan", learningPlanRoute);
 
 
