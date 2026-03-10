@@ -12,8 +12,8 @@ import {
   getStudentProgress,
   getAllUsers,
   getMyProfile,
-  updateStatus,
   getSingleUser,
+  updateUserByID,
 } from "./user.controller";
 import { allowRole, authGuard } from "../../middleware/auth.middleware";
 import { upload } from "../../middleware/multer.midleware";
@@ -25,6 +25,7 @@ import {
   registerUserSchema,
   resetPasswordSchema,
   updateStatusSchema,
+  updateUserByIDSchema,
   updateUserSchema,
 
 } from "./user.validation";
@@ -43,6 +44,9 @@ router.get("/get-single-user/:userId", authGuard, allowRole("admin"), getSingleU
 
 
 router.post("/logout", authGuard, logout);
+
+//delete user
+router.route("/delete-account").delete(authGuard, getSingleUser);
 
 router.post(
   "/forget-password",
@@ -64,16 +68,16 @@ router.post(
 
 router.route("/get-my-profile").get(authGuard, getMyProfile);
 
-router
-  .route("/update-user")
-  .patch(
-    authGuard,
-    upload.single("image"),
-    validateRequest(updateUserSchema),
-    updateUser,
-  );
+router.patch(
+  "/update-user",
+  authGuard,
+  upload.single("image"),
+  validateRequest(updateUserSchema),
+  updateUser
+);
+
 // Update status
-router.route("/update-status/:userId").patch(authGuard, allowRole("admin"), validateRequest(updateStatusSchema), updateStatus );
+router.route("/update-user/:userId").patch(authGuard, allowRole("admin"), upload.single("image"), validateRequest(updateUserByIDSchema), updateUserByID);
 
 router.patch(
   "/change-password",

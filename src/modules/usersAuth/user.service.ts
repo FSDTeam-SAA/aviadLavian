@@ -82,8 +82,8 @@ export const userService = {
     if (search) {
       andConditions.push({
         $or: [
-          { firstName: { $regex: search, $options: "i" } },
-          { lastName: { $regex: search, $options: "i" } },
+          { FirstName: { $regex: search, $options: "i" } },
+          { LastName: { $regex: search, $options: "i" } },
           { email: { $regex: search, $options: "i" } },
         ],
       });
@@ -122,7 +122,7 @@ export const userService = {
       .find(query)
       .skip(skip)
       .limit(limit)
-      .select("email country firstName lastName profileImage role");
+      .select("email country FirstName LastName profileImage role");
 
     const totalUsers = await userModel.countDocuments(query);
 
@@ -142,13 +142,13 @@ export const userService = {
   //get single user
   async getSingleUser(req: any) {
     const { userId } = req.params
-    const user = await userModel.findOne({ _id: userId }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email isVerified");
+    const user = await userModel.findOne({ _id: userId }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email isVerified");
     return user;
   },
 
   //grt my profile
   async getMyProfile(req: any) {
-    const user = await userModel.findOne({ _id: req.user._id }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+    const user = await userModel.findOne({ _id: req.user._id }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     return user;
   },
 
@@ -181,7 +181,7 @@ export const userService = {
         { new: true }
       )
       .select(
-        "firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status"
+        "FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status"
       );
 
     if (!user) throw new CustomError(400, "User not found");
@@ -207,13 +207,30 @@ export const userService = {
   },
 
   //update status any user by admin only
-  async updateStatus(req: any) {
+  async updateUserByID(req: any) {
     const { userId } = req.params
-    const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+const image = req.file as Express.Multer.File;
 
-    console.log(user);
-
+    const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("FirstName LastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     if (!user) throw new CustomError(400, "User not found");
+
+    if (image) {
+      if (user.profileImage?.public_id) {
+        await deleteCloudinary(user.profileImage.public_id);
+      }
+
+      const imageAsset = await uploadCloudinary(image.path);
+
+      if (imageAsset) {
+        user.profileImage = {
+          public_id: imageAsset.public_id,
+          secure_url: imageAsset.secure_url,
+        };
+
+        await user.save();
+      }
+    }
+
     return user
   },
 
@@ -268,6 +285,13 @@ export const userService = {
     //     // Don't throw error - logout should still succeed
     //   }
     // }
+  },
+
+
+  //delete user
+  async deleteUser(req: any) {
+    const user = await userModel.findOneAndDelete({ _id: req.user._id });
+    return user;
   },
 
   async forgetPassword(email: string) {

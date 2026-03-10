@@ -88,8 +88,9 @@ export const getMyProfile = asyncHandler(async (req, res) => {
 });
 
 //update status by admin account atatus
-export const updateStatus = asyncHandler(async (req, res) => {
-  const result = await userService.updateStatus(req);
+export const updateUserByID = asyncHandler(async (req, res) => {
+
+  const result = await userService.updateUserByID(req);
   ApiResponse.sendSuccess(res, 200, "User status updated successfully", result);
 });
 
@@ -139,6 +140,13 @@ export const logout = asyncHandler(async (req, res) => {
 
   ApiResponse.sendSuccess(res, 200, "Logged out", {});
 });
+
+//delete user
+export const deleteUser = asyncHandler(async (req, res) => {
+  const result = await userService.deleteUser(req);
+  ApiResponse.sendSuccess(res, 200, "User deleted successfully", result);
+});
+
 
 // user.controller.ts
 export const forgetPassword = asyncHandler(async (req, res) => {
