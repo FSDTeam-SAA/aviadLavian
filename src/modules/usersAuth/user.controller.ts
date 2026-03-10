@@ -72,7 +72,7 @@ export const login = asyncHandler(async (req, res) => {
 
 //get all users by admin
 export const getAllUsers = asyncHandler(async (req, res) => {
-  const { data, meta } = await userService.getAllUsers(req);
+  const { data , meta} = await userService.getAllUsers(req);
   ApiResponse.sendSuccess(res, 200, "Users fetched successfully", data, meta);
 });
 
@@ -144,13 +144,7 @@ export const logout = asyncHandler(async (req, res) => {
 //delete user
 export const deleteUser = asyncHandler(async (req, res) => {
   const result = await userService.deleteUser(req);
-  ApiResponse.sendSuccess(res, 200, "User deleted successfully");
-});
-
-//delete user by id for admin
-export const deleteUserByID = asyncHandler(async (req, res) => {
-  const result = await userService.deleteUserByID(req);
-  ApiResponse.sendSuccess(res, 200, "User deleted successfully");
+  ApiResponse.sendSuccess(res, 200, "User deleted successfully", result);
 });
 
 
