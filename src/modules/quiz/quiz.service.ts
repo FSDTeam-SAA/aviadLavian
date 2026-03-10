@@ -14,7 +14,6 @@ export const createQuizService = async (
     throw new Error("At least one topic must be selected");
   }
 
-  // সব selected topic থেকে একসাথে question আনো
   const topicRegex = topicIds.map((id) => new RegExp(`^${id}$`, "i"));
 
   const allQuestions = await QuestionModel.find({
@@ -29,11 +28,10 @@ export const createQuizService = async (
     throw new Error("No questions available for the selected topics");
   }
 
-  // Fisher-Yates shuffle — সব topic এর question একসাথে mix হবে
-  // এতে করে কখনো এক topic এর প্রথম সব question আগে আসবে না
+
   const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
 
-  // User যত চায় তত নেবে, না থাকলে যা আছে তাই
+
   const selectedCount = Math.min(questionCount, shuffled.length);
   const selectedQuestions = shuffled.slice(0, selectedCount);
 
@@ -481,4 +479,18 @@ export const getSingleQuestionResultService = async (
       selectedCount: opt.selectedCount ?? 0,
     })),
   };
+};
+
+export const deleteQuizService = async (
+  quizId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+  // check quiz exists
+  const quiz = await QuizModel.findOne({ _id: quizId, userId });
+  if (!quiz) throw new Error("Quiz not found");
+
+  // delete quiz
+  await QuizModel.deleteOne({ _id: quizId });
+
+  return { message: "Quiz deleted successfully" };
 };

@@ -10,12 +10,10 @@ import {
   getQuizProgressService,
   getQuizHistoryService,
   getSingleQuestionResultService,
+  deleteQuizService,
 } from "./quiz.service";
 import { Types } from "mongoose";
 
-// ─────────────────────────────────────────────
-// POST /quizzes/create
-// ─────────────────────────────────────────────
 export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
   const { topicIds, quizName, mode, questionCount, timeLimitMinutes } =
     req.body;
@@ -28,9 +26,7 @@ export const createQuiz = asyncHandler(async (req: Request, res: Response) => {
       "At least one topicId is required",
     );
   }
-  if (!quizName) {
-    return ApiResponse.sendSuccess(res, 400, "quizName is required");
-  }
+
   if (!mode || !["study", "exam"].includes(mode)) {
     return ApiResponse.sendSuccess(res, 400, "mode must be 'study' or 'exam'");
   }
@@ -201,3 +197,15 @@ export const getSingleQuestionResult = asyncHandler(
     );
   },
 );
+
+export const deleteQuiz = asyncHandler(async (req: Request, res: Response) => {
+  const { quizId } = req.params;
+  const userId = req.user?._id;
+
+  const result = await deleteQuizService(
+    new Types.ObjectId(quizId as string),
+    new Types.ObjectId(userId),
+  );
+
+  return ApiResponse.sendSuccess(res, 200, result.message, null);
+});
