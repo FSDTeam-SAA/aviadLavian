@@ -8,26 +8,37 @@ export const getQuestionsByTopicService = async (
   topicId: string,
   userId: string,
 ) => {
+  // 1️⃣ All questions for this topic
   const questions = await QuestionModel.find({
     topicId: { $regex: `^${topicId}$`, $options: "i" },
     isDeleted: false,
     isHidden: false,
   }).lean();
 
+  // 2️⃣ All attempts by this user in this topic
   const attemptedQuestions = await QuestionBankAttemptModel.find({
     userId,
     topicId: { $regex: `^${topicId}$`, $options: "i" },
   }).lean();
 
-  const attemptedSet = new Set(
-    attemptedQuestions.map((q) => q.questionId.toString()),
-  );
+  // 3️⃣ Create a map for fast lookup
+  const attemptMap = new Map<string, { isCorrect: boolean }>();
+  attemptedQuestions.forEach((attempt) => {
+    attemptMap.set(attempt.questionId.toString(), {
+      isCorrect: attempt.isCorrect,
+    });
+  });
 
-  const questionsWithSerial = questions.map((question, index) => ({
-    ...question,
-    serialNumber: index + 1,
-    isAttempted: attemptedSet.has(question._id.toString()),
-  }));
+  // 4️⃣ Merge attempt info into questions
+  const questionsWithSerial = questions.map((question, index) => {
+    const attempt = attemptMap.get(question._id.toString());
+    return {
+      ...question,
+      serialNumber: index + 1,
+      isAttempted: !!attempt,
+      isCorrect: attempt?.isCorrect ?? null, // null if not attempted
+    };
+  });
 
   return questionsWithSerial;
 };
