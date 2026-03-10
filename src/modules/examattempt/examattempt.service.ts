@@ -296,7 +296,6 @@ export const getExamResultByQuestionIdService = async (
   userId: Types.ObjectId,
   questionId: Types.ObjectId,
 ) => {
-
   const exam = await ExamAttemptModel.findOne({
     _id: examId,
     userId,
@@ -306,15 +305,12 @@ export const getExamResultByQuestionIdService = async (
   if (exam.status !== "submitted")
     throw new Error("Exam has not been submitted yet");
 
-
   const question = await QuestionModel.findById(questionId).lean();
   if (!question) throw new Error("Question not found");
-
 
   const userAnswer = exam.answers.find(
     (a: any) => a.questionId.toString() === questionId.toString(),
   );
-
 
   const allUserCount = await userModel.countDocuments({});
 
@@ -332,7 +328,6 @@ export const getExamResultByQuestionIdService = async (
     };
   });
 
-
   return {
     examId: exam._id,
     examName: exam.examName,
@@ -345,4 +340,65 @@ export const getExamResultByQuestionIdService = async (
     options,
     marks: question.marks ?? 1,
   };
+};
+export const deleteExamService = async (
+  examId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+  const exam = await ExamAttemptModel.findOne({
+    _id: examId,
+    userId,
+  });
+
+  if (!exam) {
+    throw new Error("Exam not found");
+  }
+
+  await ExamAttemptModel.findByIdAndDelete(examId);
+
+  return {
+    message: "Exam deleted successfully",
+  };
+};
+export const duplicateExamService = async (
+  examId: Types.ObjectId,
+  userId: Types.ObjectId,
+) => {
+  const oldExam = await ExamAttemptModel.findOne({
+    _id: examId,
+    userId,
+  }).lean();
+
+  if (!oldExam) {
+    throw new Error("Exam not found 2");
+  }
+
+  // same questions (no shuffle)
+  const questionIds = oldExam.questions;
+
+  const questions = await QuestionModel.find({
+    _id: { $in: questionIds },
+  })
+    .select("marks")
+    .lean();
+
+  const totalMarks = questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+
+  // delete old exam
+  await ExamAttemptModel.findByIdAndDelete(examId);
+
+  // create new exam with same question order
+  const newExam = await ExamAttemptModel.create({
+    userId,
+    topicId: oldExam.topicId,
+    examName: oldExam.examName,
+    questions: questionIds,
+    totalQuestions: questionIds.length,
+    totalMarks,
+    timeLimitMinutes: oldExam.timeLimitMinutes,
+    startedAt: new Date(),
+    status: "ongoing",
+  });
+
+  return newExam;
 };
