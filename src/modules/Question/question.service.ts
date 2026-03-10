@@ -1,6 +1,7 @@
 import { QuestionModel } from "./question.model";
 import CustomError from "../../helpers/CustomError";
 import { IQuestion, IUpdateQuestion } from "./question.interface";
+import { paginationHelper } from "../../utils/pagination";
 
 const createQuestion = async (payload: Partial<IQuestion>) => {
   try {
@@ -23,9 +24,26 @@ const getAllQuestions = async (query: any) => {
   if (query.difficulty) filter.difficulty = query.difficulty;
   if (query.isHidden !== undefined) filter.isHidden = query.isHidden === "true";
 
-  return await QuestionModel.find(filter)
+  // pagination
+  const { page, limit, skip } = paginationHelper(query.page, query.limit);
+
+  const total = await QuestionModel.countDocuments(filter);
+
+  const questions = await QuestionModel.find(filter)
     .populate("articleId", "name")
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: questions,
+  };
 };
 
 const getQuestionById = async (id: string) => {

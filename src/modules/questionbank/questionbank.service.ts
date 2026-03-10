@@ -1,6 +1,8 @@
 import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { QuestionBankAttemptModel } from "./questionbank.models";
+import { injuryService } from "../injury/injury.service";
+import { paginationHelper } from "../../utils/pagination";
 
 export const getQuestionsByTopicService = async (
   topicId: string,
@@ -147,8 +149,8 @@ export const getQuestionDetailsService = async (
 export const getAttemptByTopicService = async (
   topicId: string,
   userId: Types.ObjectId,
+  includeQuestions: boolean = true,
 ) => {
-  // all questions of this topic
   const questions = await QuestionModel.find({
     topicId: { $regex: `^${topicId}$`, $options: "i" },
     isDeleted: false,
@@ -157,23 +159,19 @@ export const getAttemptByTopicService = async (
 
   const totalQuestions = questions.length;
 
-  // all attempts by this user in this topic
   const attempts = await QuestionBankAttemptModel.find({
     userId,
     topicId: { $regex: `^${topicId}$`, $options: "i" },
   }).lean();
 
   const attemptedSet = new Set(attempts.map((a) => a.questionId.toString()));
-
   const attemptedCount = attempts.length;
 
-  // completion percentage
   const completionPercentage =
     totalQuestions > 0
       ? Math.round((attemptedCount / totalQuestions) * 100)
       : 0;
 
-  // correct / incorrect stats
   const correctCount = attempts.filter((a) => a.isCorrect).length;
   const incorrectCount = attempts.filter((a) => !a.isCorrect).length;
 
@@ -185,20 +183,23 @@ export const getAttemptByTopicService = async (
       ? Math.round((incorrectCount / attemptedCount) * 100)
       : 0;
 
-  // questions with attempt status
-  const questionsWithDetails = questions.map((question, index) => ({
-    serialNumber: index + 1,
-    _id: question._id,
-    questionText: question.questionText,
-    explanation: question.explanation,
-    isAttempted: attemptedSet.has(question._id.toString()),
-    options: question.options.map((opt) => ({
-      optionId: opt._id,
-      text: opt.text,
-      selectedCount: opt.selectedCount ?? 0,
-      isCorrect: opt.isCorrect,
-    })),
-  }));
+  let questionsWithDetails: any[] = [];
+
+  if (includeQuestions) {
+    questionsWithDetails = questions.map((question, index) => ({
+      serialNumber: index + 1,
+      _id: question._id,
+      questionText: question.questionText,
+      explanation: question.explanation,
+      isAttempted: attemptedSet.has(question._id.toString()),
+      options: question.options.map((opt) => ({
+        optionId: opt._id,
+        text: opt.text,
+        selectedCount: opt.selectedCount ?? 0,
+        isCorrect: opt.isCorrect,
+      })),
+    }));
+  }
 
   return {
     topicId,
@@ -213,6 +214,34 @@ export const getAttemptByTopicService = async (
       incorrectPercentage,
     },
 
-    questions: questionsWithDetails,
+    ...(includeQuestions && { questions: questionsWithDetails }),
+  };
+};
+
+export const questionBankEntryService = async (
+  userId: Types.ObjectId,
+  query: any,
+) => {
+  const bodyRegions = await injuryService.getBodyRegions();
+
+  const promises = bodyRegions.map((bodyRegion: any) =>
+    getAttemptByTopicService(bodyRegion, userId, false),
+  );
+
+  const results = await Promise.all(promises);
+
+  // pagination helper
+  const { page, limit, skip } = paginationHelper(query.page, query.limit);
+
+  const paginatedData = results.slice(skip, skip + limit);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total: results.length,
+      totalPage: Math.ceil(results.length / limit),
+    },
+    data: paginatedData,
   };
 };

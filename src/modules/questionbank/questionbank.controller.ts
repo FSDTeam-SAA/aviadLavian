@@ -8,6 +8,7 @@ import {
   getAttemptByTopicService,
   getQuestionDetailsService,
   getQuestionsByTopicService,
+  questionBankEntryService,
 } from "./questionbank.service";
 
 export const getQuestionsByTopic = asyncHandler(
@@ -105,3 +106,12 @@ export const getAttemptByTopicController = async (
     });
   }
 };
+
+export const questionBankEntryController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).user._id;
+
+    const result = await questionBankEntryService(userId, req.query);
+    ApiResponse.sendSuccess(res, 200, "Question bank entry", result);
+  },
+);

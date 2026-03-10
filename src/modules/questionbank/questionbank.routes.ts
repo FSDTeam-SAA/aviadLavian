@@ -4,11 +4,13 @@ import {
   getQuestionDetails,
   attemptQuestion,
   getAttemptByTopicController,
+  questionBankEntryController,
 } from "./questionbank.controller";
 import { authGuard } from "../../middleware/auth.middleware";
 
 const router = Router();
 
+router.get("/question-bank-entry", authGuard, questionBankEntryController);
 // Topic এর সব question আনো (serial number সহ)
 router.get("/topics/:topicId/questions", authGuard, getQuestionsByTopic);
 
