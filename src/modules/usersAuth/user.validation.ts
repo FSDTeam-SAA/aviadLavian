@@ -71,6 +71,7 @@ export const updateUserSchema = z
       .string()
       .min(1, "Registration number cannot be empty")
       .optional(),
+    status: z.enum(["active", "inactive", "blocked"]).optional(),
 
     dateOfBirth: z.coerce
       .date().refine((value) => {
