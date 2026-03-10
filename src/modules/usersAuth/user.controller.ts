@@ -147,6 +147,12 @@ export const deleteUser = asyncHandler(async (req, res) => {
   ApiResponse.sendSuccess(res, 200, "User deleted successfully", result);
 });
 
+//delete user by id for admin
+export const deleteUserByID = asyncHandler(async (req, res) => {
+  const result = await userService.deleteUserByID(req);
+  ApiResponse.sendSuccess(res, 200, "User deleted successfully", result);
+});
+
 
 // user.controller.ts
 export const forgetPassword = asyncHandler(async (req, res) => {
