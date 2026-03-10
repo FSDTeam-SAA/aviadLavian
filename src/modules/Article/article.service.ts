@@ -61,7 +61,11 @@ const getAllArticles = async (params: IGetAllArticlesParams) => {
     const sortObj: any = sort === "accending" ? { createdAt: 1 } : { createdAt: -1 };
 
     const [articles, total] = await Promise.all([
-        ArticleModel.find(query).sort(sortObj).skip(skip).limit(pageLimit),
+            ArticleModel.find(query)
+                .populate('topicIds')
+                .sort(sortObj)
+                .skip(skip)
+                .limit(pageLimit),
         ArticleModel.countDocuments(query),
     ]);
 
