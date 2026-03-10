@@ -28,7 +28,6 @@ import {
   updateUserSchema,
 
 } from "./user.validation";
-import { permission } from "../../middleware/permission.middleware";
 
 const router = Router();
 // auth
@@ -39,15 +38,12 @@ router.post(
 );
 
 router.post("/login", validateRequest(loginSchema), login);
-router.post("/get-all-users", authGuard, allowRole("admin"), getAllUsers);
+router.get("/get-all-users", authGuard, allowRole("admin"), getAllUsers);
 router.get("/get-single-user/:userId", authGuard, allowRole("admin"), getSingleUser);
 
 
 router.post("/logout", authGuard, logout);
 
-// // password
-// router.post("/forget-password", forgetPassword);
-// router.post("/reset-password", resetPassword);
 router.post(
   "/forget-password",
   validateRequest(forgetPasswordSchema),
@@ -78,6 +74,7 @@ router
   );
 // Update status
 router.route("/update-status/:userId").patch(authGuard, allowRole("admin"), validateRequest(updateStatusSchema), updateStatus );
+
 router.patch(
   "/change-password",
   authGuard,
