@@ -28,19 +28,28 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
 
 const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
   const userId = req?.user?._id;
+  const { page: pageParam, limit: limitParam } = req.query;
+  const { page, limit, skip } = paginationHelper(pageParam, limitParam);
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     throw new CustomError(400, "Invalid userId");
   }
 
-  const flashcards = await FlashcardModel.find({
+  const filter = {
     topicId: injuryId,
     isActive: true,
-  }).lean();
+  };
 
-  if (!flashcards.length) {
+  const totalData = await FlashcardModel.countDocuments(filter);
+
+  if (!totalData) {
     throw new CustomError(404, "Flashcard not found");
   }
+
+  const flashcards = await FlashcardModel.find(filter)
+    .skip(skip)
+    .limit(limit)
+    .lean();
 
   const flashcardIds = flashcards.map((item) => item._id);
 
@@ -50,7 +59,7 @@ const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
   })
     .select("flashcardId userAnswer")
     .lean();
-    
+
   const progressMap = new Map(
     progressList.map((item) => [String(item.flashcardId), item.userAnswer])
   );
@@ -60,7 +69,15 @@ const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
     userAnswer: progressMap.get(String(flashcard._id)) || "",
   }));
 
-  return result;
+  return {
+    meta: {
+      page,
+      limit,
+      totalData,
+      totalPage: Math.ceil(totalData / limit),
+    },
+    data: result,
+  };
 };
 
 //get single flashcard
