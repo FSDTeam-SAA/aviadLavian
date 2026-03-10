@@ -12,8 +12,13 @@ export const createQuestion = asyncHandler(async (req, res) => {
 });
 
 export const getAllQuestions = asyncHandler(async (req, res) => {
-  const questions = await questionService.getAllQuestions(req.query);
-  const Response = { questions, questionsCount: questions.length };
+  const result = await questionService.getAllQuestions(req.query);
+
+  const Response = {
+    meta: result.meta,
+    questions: result.data,
+  };
+
   ApiResponse.sendSuccess(res, 200, "Question list", Response);
 });
 
