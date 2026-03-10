@@ -7,6 +7,7 @@ import {
   getQuizResult,
   getQuizProgress,
   getQuizHistory,
+  getSingleQuestionResult,
 } from "./quiz.controller";
 
 import { authGuard } from "../../middleware/auth.middleware";
@@ -33,6 +34,8 @@ router.get("/:quizId/result", authGuard, getQuizResult);
 
 // Progress
 router.get("/:quizId/progress", authGuard, getQuizProgress);
+
+router.get("/:quizId/question/:questionId", authGuard, getSingleQuestionResult);
 
 const quizRoutes = router;
 export default quizRoutes;
