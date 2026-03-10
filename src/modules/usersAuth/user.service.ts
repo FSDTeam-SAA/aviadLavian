@@ -15,6 +15,7 @@ import {
   forgotPasswordOtpTemplate,
   forgotPasswordUnifiedTemplate,
 } from "../../tempaletes/auth.templates";
+import { paginationHelper } from "../../utils/pagination";
 
 export const userService = {
   async registerUser(payload: Partial<IUser>) {
@@ -53,7 +54,7 @@ export const userService = {
   },
 
   async login(email: string, password: string) {
-    const user = await userModel.findOne({ email });
+    const user = await userModel.findOne({ email, isDeleted: false });
     if (!user) throw new CustomError(400, "user not found");
 
     const isPasswordMatch = await bcryptjs.compare(password, user.password);
@@ -69,9 +70,59 @@ export const userService = {
   },
 
   //get all users
-  async getAllUsers() {
-    const users = await userModel.find({ role: "user" }).select("email country FirstName LastName profileImage role");
-    return users;
+  async getAllUsers(req: any) {
+    const { page: pageParam, limit: limitParam, search, filter } = req.query
+
+    const { page, limit, skip } = paginationHelper(pageParam, limitParam);
+
+    //now implement search and filter
+    const query: any = {};
+    if (search) {
+      query.$or = [
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // filter by status and isVerified
+    const allowedStatus = ["active", "deactive", "blocked"];
+    const allowedBoolean = ["true", "false"];
+
+    if (filter) {
+      const conditions: any[] = [];
+
+      if (allowedStatus.includes(filter)) {
+        conditions.push({ status: filter });
+      }
+
+      if (allowedBoolean.includes(filter)) {
+        conditions.push({ isVerified: filter === "true" });
+      }
+
+      // if nothing matched
+      if (conditions.length === 0) {
+        throw new CustomError(
+          400,
+          "Invalid filter. Allowed values: active, deactive, blocked, true, false"
+        );
+      }
+
+      query.$or = conditions;
+    }
+
+    const users = await userModel.find({ role: "user" , ...query}).skip(skip).limit(limit).select("email country FirstName LastName profileImage role");
+
+    //count users
+    const totalUsers = await userModel.countDocuments({ role: "user" , ...query});
+    return {data: users,meta:{page,limit,totalUsers}};
+  },
+
+  //get single user
+  async getSingleUser(req: any) {
+    const { userId } = req.params
+    const user = await userModel.findOne({ _id: userId }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email isVerified");
+    return user;
   },
 
   //grt my profile
@@ -80,7 +131,7 @@ export const userService = {
     return user;
   },
 
-  //update user
+  //update user profile as my profile
   async updateUser(req: any) {
 
     const image = req.file as Express.Multer.File;
@@ -88,7 +139,7 @@ export const userService = {
 
     const user = await userModel.findOneAndUpdate({ _id: req.user._id }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
     if (!user) throw new CustomError(400, "User not found");
-    
+
     if (image) {
       //delete old image
       if (user.profileImage?.public_id) {
@@ -111,6 +162,16 @@ export const userService = {
   },
 
 
+  //update status any user by admin only
+  async updateStatus(req: any) {
+    const { userId } = req.params
+    const user = await userModel.findOneAndUpdate({ _id: userId, isDeleted: false }, req.body, { new: true }).select("firstName lastName country address instituteName idNumber registrationNumber dateOfBirth email profileImage status email");
+
+    console.log(user);
+
+    if (!user) throw new CustomError(400, "User not found");
+    return user
+  },
 
 
   // Service

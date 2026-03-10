@@ -78,9 +78,15 @@ export const updateUserSchema = z
         const maxDate = new Date();
         return value >= minDate && value <= maxDate;
       })
-      .optional(),
+      .optional()
+  })
+  .strict();
 
-    email: z.string().email("Invalid email format").optional(),
+
+  //update status any user by admin only
+  export const updateStatusSchema = z
+  .object({
+    status: z.enum(["active", "inactive", "blocked"]).optional(),
   })
   .strict();
 
