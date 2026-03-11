@@ -2,6 +2,7 @@ import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { ExamAttemptModel } from "./examattempt.models";
 import { userModel } from "../usersAuth/user.models";
+import { paginationHelper } from "../../utils/pagination";
 
 export const startExamService = async (
   userId: Types.ObjectId,
@@ -401,4 +402,40 @@ export const duplicateExamService = async (
   });
 
   return newExam;
+};
+
+export const getAllExamService = async (query: any) => {
+  const { page, limit, skip } = paginationHelper(query.page, query.limit);
+
+  const filter: any = {};
+
+  if (query.topicId) {
+    filter.topicId = { $regex: `^${query.topicId}$`, $options: "i" };
+  }
+
+  if (query.status) {
+    filter.status = query.status;
+  }
+
+  const exams = await ExamAttemptModel.find(filter)
+    .populate("userId", "name email")
+    .select(
+      "examName topicId totalQuestions attemptedQuestions correctAnswers incorrectAnswers scorePercentage obtainedMarks totalMarks timeSpentSeconds status startedAt submittedAt",
+    )
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  const total = await ExamAttemptModel.countDocuments(filter);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: exams,
+  };
 };
