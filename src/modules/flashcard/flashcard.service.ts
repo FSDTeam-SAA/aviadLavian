@@ -302,9 +302,12 @@ const getAllFlashcards = async (
     );
   }
 
-  const { page: currentPage, limit: pageLimit, skip } = paginationHelper(page as string, limit as string);
-  const now = new Date();
+  const { page: currentPage, limit: pageLimit, skip } = paginationHelper(
+    page as string,
+    limit as string
+  );
 
+  const now = new Date();
   const match: any = {};
 
   // status filter
@@ -315,7 +318,6 @@ const getAllFlashcards = async (
     match.isActive = true;
   }
 
-  // sort object
   const sortObj = sortBy === "assend" ? { createdAt: 1 } : { createdAt: -1 };
 
   const pipeline: any[] = [
@@ -399,8 +401,12 @@ const getAllFlashcards = async (
     });
   }
 
-  // user progress filter
-  if (userId && Types.ObjectId.isValid(userId)) {
+  // only normal user can see own progress
+  if (!isAdmin && userId) {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new CustomError(400, "Invalid userId");
+    }
+
     pipeline.push(
       {
         $lookup: {
@@ -450,24 +456,45 @@ const getAllFlashcards = async (
     );
   }
 
+  if (isAdmin) {
+    pipeline.push(
+      {
+        $project: {
+          _id: 1,
+          question: 1,
+          answer: 1,
+          topicId: 1,
+          difficulty: 1,
+          isActive: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          __v: 1,
+        },
+      }
+    );
+  } else {
+    pipeline.push(
+      {
+        $project: {
+          _id: 1,
+          question: 1,
+          answer: 1,
+          topicId: 1,
+          difficulty: 1,
+          isActive: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          __v: 1,
+          progress: 1,
+          userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
+          lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
+          nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
+        },
+      }
+    );
+  }
+
   pipeline.push(
-    {
-      $project: {
-        _id: 1,
-        question: 1,
-        answer: 1,
-        topicId: 1,
-        difficulty: 1,
-        isActive: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        __v: 1,
-        progress: 1,
-        userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
-        lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
-        nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
-      },
-    },
     { $sort: sortObj },
     {
       $facet: {
