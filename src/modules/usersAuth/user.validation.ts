@@ -9,7 +9,6 @@ export const registerUserSchema = z
       .string()
       .min(6, "Password must be at least 6 characters")
       .max(100, "Password too long"),
-    profession: z.string().min(1, "Profession is required").optional(),
   })
   .strict();
 

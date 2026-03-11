@@ -9,7 +9,7 @@ import { FlashcardProgressModel } from "../flashcardprogress/flashcardprogress.m
 const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.File) => {
 
   //now create flashcard
-  const flashcard = await FlashcardModel.create(data);
+  const flashcard = (await FlashcardModel.create(data));
   if (!flashcard) throw new CustomError(400, "Flashcard not created");
 
   //now upload image
@@ -26,6 +26,60 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
 
 //get flashcard by injuryId also user progress
 
+// const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
+//   const userId = req?.user?._id;
+//   const { page: pageParam, limit: limitParam } = req.query;
+//   const { page, limit, skip } = paginationHelper(pageParam, limitParam);
+
+//   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//     throw new CustomError(400, "Invalid userId");
+//   }
+
+//   const filter = {
+//     topicId: injuryId,
+//     isActive: true,
+//   };
+
+//   const totalData = await FlashcardModel.countDocuments(filter);
+
+//   if (!totalData) {
+//     throw new CustomError(404, "Flashcard not found");
+//   }
+
+//   const flashcards = await FlashcardModel.find(filter)
+//     .skip(skip)
+//     .limit(limit)
+//     .lean();
+
+//   const flashcardIds = flashcards.map((item) => item._id);
+
+//   const progressList = await FlashcardProgressModel.find({
+//     userId: new mongoose.Types.ObjectId(userId),
+//     flashcardId: { $in: flashcardIds },
+//   })
+//     .select("flashcardId userAnswer")
+//     .lean();
+
+//   const progressMap = new Map(
+//     progressList.map((item) => [String(item.flashcardId), item.userAnswer])
+//   );
+
+//   const result = flashcards.map((flashcard) => ({
+//     ...flashcard,
+//     userAnswer: progressMap.get(String(flashcard._id)) || "",
+//   }));
+
+//   return {
+//     meta: {
+//       page,
+//       limit,
+//       totalData,
+//       totalPage: Math.ceil(totalData / limit),
+//     },
+//     data: result,
+//   };
+// };
+
 const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
   const userId = req?.user?._id;
   const { page: pageParam, limit: limitParam } = req.query;
@@ -35,71 +89,225 @@ const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
     throw new CustomError(400, "Invalid userId");
   }
 
-  const filter = {
-    topicId: injuryId,
-    isActive: true,
-  };
+  const now = new Date();
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  const totalData = await FlashcardModel.countDocuments(filter);
+  const matchTopicId = mongoose.Types.ObjectId.isValid(injuryId)
+    ? new mongoose.Types.ObjectId(injuryId)
+    : injuryId;
 
-  if (!totalData) {
-    throw new CustomError(404, "Flashcard not found");
-  }
+  const result = await FlashcardModel.aggregate([
+    {
+      $match: {
+        topicId: matchTopicId,
+        isActive: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "flashcardprogresses",
+        let: { flashcardId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$flashcardId", "$$flashcardId"] },
+                  { $eq: ["$userId", userObjectId] },
+                ],
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              userAnswer: 1,
+              lastReviewedAt: 1,
+              nextReviewAt: 1,
+              updatedAt: 1,
+            },
+          },
+          { $sort: { updatedAt: -1 } },
+          { $limit: 1 },
+        ],
+        as: "progress",
+      },
+    },
+    {
+      $addFields: {
+        progress: { $arrayElemAt: ["$progress", 0] },
+      },
+    },
+    {
+      $match: {
+        $or: [
+          { progress: null },
+          { "progress.nextReviewAt": null },
+          { "progress.nextReviewAt": { $lte: now } },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "injuries",
+        let: { topicId: "$topicId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  "$_id",
+                  {
+                    $cond: [
+                      { $eq: [{ $type: "$$topicId" }, "objectId"] },
+                      "$$topicId",
+                      { $toObjectId: "$$topicId" },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              Id: 1,
+              Name: 1,
+              Primary_Body_Region: 1,
+              Secondary_Body_Region: 1,
+              Acuity: 1,
+              Age_Group: 1,
+              Tissue_Type: 1,
+              Etiology_Mechanism: 1,
+              Common_Sports: 1,
+              Synonyms_Abbreviations: 1,
+              Importance_Level: 1,
+              Description: 1,
+              Video_URL: 1,
+              Tags_Keywords: 1,
+            },
+          },
+        ],
+        as: "topic",
+      },
+    },
+    {
+      $addFields: {
+        topic: { $arrayElemAt: ["$topic", 0] },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        question: 1,
+        answer: 1,
+        topicId: 1,
+        topic: 1,
+        difficulty: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
+        lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
+        nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    {
+      $facet: {
+        meta: [{ $count: "totalData" }],
+        data: [{ $skip: skip }, { $limit: limit }],
+      },
+    },
+    {
+      $addFields: {
+        totalData: {
+          $ifNull: [{ $arrayElemAt: ["$meta.totalData", 0] }, 0],
+        },
+      },
+    },
+    {
+      $project: {
+        data: 1,
+        meta: {
+          page: { $literal: page },
+          limit: { $literal: limit },
+          totalData: "$totalData",
+          totalPage: {
+            $ceil: {
+              $divide: ["$totalData", limit],
+            },
+          },
+        },
+      },
+    },
+  ]);
 
-  const flashcards = await FlashcardModel.find(filter)
-    .skip(skip)
-    .limit(limit)
-    .lean();
-
-  const flashcardIds = flashcards.map((item) => item._id);
-
-  const progressList = await FlashcardProgressModel.find({
-    userId: new mongoose.Types.ObjectId(userId),
-    flashcardId: { $in: flashcardIds },
-  })
-    .select("flashcardId userAnswer")
-    .lean();
-
-  const progressMap = new Map(
-    progressList.map((item) => [String(item.flashcardId), item.userAnswer])
-  );
-
-  const result = flashcards.map((flashcard) => ({
-    ...flashcard,
-    userAnswer: progressMap.get(String(flashcard._id)) || "",
-  }));
-
-  return {
+  const finalResult = result[0] || {
     meta: {
       page,
       limit,
-      totalData,
-      totalPage: Math.ceil(totalData / limit),
+      totalData: 0,
+      totalPage: 0,
     },
-    data: result,
+    data: [],
   };
+
+  return finalResult;
 };
+
 
 //get single flashcard
 const getSingleFlashcard = async (id: string) => {
-  const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true });
+  const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true }).populate("topicId");
   if (!flashcard) throw new CustomError(404, "Flashcard not found");
 
   return flashcard;
 }
 
-//get all flashcards
+//!get all flashcards
 const getAllFlashcards = async (
-  { page, limit, sort = "accending", topicId, status = "active" }: GetAllFlashcardsParams,
+  {
+    page,
+    limit,
+    sortBy = "assend",
+    filterBytopicId = "",
+    status = "active",
+    search,
+  }: GetAllFlashcardsParams,
   userId?: string,
   isAdmin: boolean = false
 ) => {
-  const { page: currentPage, limit: pageLimit, skip } = paginationHelper(page, limit);
+  // validate filterBytopicId
+  if (filterBytopicId && !Types.ObjectId.isValid(filterBytopicId)) {
+    throw new CustomError(400, "Invalid filterBytopicId, must be a valid ObjectId");
+  }
+
+  // validate sortBy
+  const allowedSortValues = ["assend", "dessce"];
+  if (sortBy && !allowedSortValues.includes(sortBy)) {
+    throw new CustomError(
+      400,
+      `Invalid sortBy. Allowed values: ${allowedSortValues.join(", ")}`
+    );
+  }
+
+  // validate status
+  const allowedStatusValues = ["active", "inactive"];
+  if (status && !allowedStatusValues.includes(status)) {
+    throw new CustomError(
+      400,
+      `Invalid status. Allowed values: ${allowedStatusValues.join(", ")}`
+    );
+  }
+
+  const { page: currentPage, limit: pageLimit, skip } = paginationHelper(page as string, limit as string);
   const now = new Date();
 
   const match: any = {};
 
-  // Status filter
+  // status filter
   if (isAdmin) {
     if (status === "active") match.isActive = true;
     else if (status === "inactive") match.isActive = false;
@@ -107,21 +315,13 @@ const getAllFlashcards = async (
     match.isActive = true;
   }
 
-  // Search filter (topicId is SINGLE ObjectId string now)
-  if (topicId) {
-    const regex = new RegExp(topicId, "i");
-    match.$or = [
-      { question: regex },
-      { topicId: regex }, // ✅ topicId is string/ObjectId string, not array
-    ];
-  }
-
-  const sortObj: any = sort === "accending" ? { createdAt: 1 } : { createdAt: -1 };
+  // sort object
+  const sortObj = sortBy === "assend" ? { createdAt: 1 } : { createdAt: -1 };
 
   const pipeline: any[] = [
     { $match: match },
 
-    // ✅ Populate topicId (single) -> Injury object
+    // populate topicId from injuries
     {
       $lookup: {
         from: "injuries",
@@ -130,22 +330,77 @@ const getAllFlashcards = async (
             $cond: [
               { $eq: [{ $type: "$topicId" }, "objectId"] },
               "$topicId",
-              { $toObjectId: "$topicId" }, // if stored as string
+              { $toObjectId: "$topicId" },
             ],
           },
         },
         pipeline: [
-          { $match: { $expr: { $eq: ["$_id", "$$topicIdObj"] } } },
-          { $project: { __v: 0, createdAt: 0, updatedAt: 0 } },
+          {
+            $match: {
+              $expr: { $eq: ["$_id", "$$topicIdObj"] },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              Id: 1,
+              Name: 1,
+              Primary_Body_Region: 1,
+              Secondary_Body_Region: 1,
+              Acuity: 1,
+              Age_Group: 1,
+              Tissue_Type: 1,
+              Etiology_Mechanism: 1,
+              Common_Sports: 1,
+              Synonyms_Abbreviations: 1,
+              Importance_Level: 1,
+              Description: 1,
+              Video_URL: 1,
+              Tags_Keywords: 1,
+            },
+          },
         ],
         as: "topicId",
       },
     },
-    // topicId becomes single object instead of array
-    { $addFields: { topicId: { $arrayElemAt: ["$topicId", 0] } } },
+    {
+      $addFields: {
+        topicId: { $arrayElemAt: ["$topicId", 0] },
+      },
+    },
   ];
 
-  if (userId) {
+  // filter by populated topicId._id
+  if (filterBytopicId) {
+    pipeline.push({
+      $match: {
+        "topicId._id": new Types.ObjectId(filterBytopicId),
+      },
+    });
+  }
+
+  // search by flashcard fields + populated topic fields
+  if (search?.trim()) {
+    const regex = new RegExp(search.trim(), "i");
+
+    pipeline.push({
+      $match: {
+        $or: [
+          { question: regex },
+          { answer: regex },
+          { "topicId.Id": regex },
+          { "topicId.Name": regex },
+          { "topicId.Primary_Body_Region": regex },
+          { "topicId.Secondary_Body_Region": regex },
+          { "topicId.Acuity": regex },
+          { "topicId.Age_Group": regex },
+        ],
+      },
+    });
+  }
+
+  // user progress filter
+  if (userId && Types.ObjectId.isValid(userId)) {
     pipeline.push(
       {
         $lookup: {
@@ -162,47 +417,103 @@ const getAllFlashcards = async (
                 },
               },
             },
-            { $project: { flashcardId: 1, nextReviewAt: 1 } },
+            {
+              $project: {
+                _id: 1,
+                flashcardId: 1,
+                userAnswer: 1,
+                lastReviewedAt: 1,
+                nextReviewAt: 1,
+                updatedAt: 1,
+              },
+            },
+            { $sort: { updatedAt: -1 } },
+            { $limit: 1 },
           ],
           as: "progress",
         },
       },
-      { $addFields: { progress: { $arrayElemAt: ["$progress", 0] } } },
+      {
+        $addFields: {
+          progress: { $arrayElemAt: ["$progress", 0] },
+        },
+      },
       {
         $match: {
-          $or: [{ "progress.nextReviewAt": { $lte: now } }, { progress: { $eq: null } }],
+          $or: [
+            { progress: null },
+            { "progress.nextReviewAt": null },
+            { "progress.nextReviewAt": { $lte: now } },
+          ],
         },
       }
     );
   }
 
-  pipeline.push({
-    $facet: {
-      meta: [{ $count: "total" }],
-      data: [{ $sort: sortObj }, { $skip: skip }, { $limit: pageLimit }],
+  pipeline.push(
+    {
+      $project: {
+        _id: 1,
+        question: 1,
+        answer: 1,
+        topicId: 1,
+        difficulty: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        progress: 1,
+        userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
+        lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
+        nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
+      },
     },
-  });
+    { $sort: sortObj },
+    {
+      $facet: {
+        data: [{ $skip: skip }, { $limit: pageLimit }],
+        meta: [{ $count: "total" }],
+      },
+    },
+    {
+      $addFields: {
+        meta: {
+          page: currentPage,
+          limit: pageLimit,
+          total: { $ifNull: [{ $arrayElemAt: ["$meta.total", 0] }, 0] },
+          pages: {
+            $ceil: {
+              $divide: [
+                { $ifNull: [{ $arrayElemAt: ["$meta.total", 0] }, 0] },
+                pageLimit,
+              ],
+            },
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        data: 1,
+        meta: 1,
+      },
+    }
+  );
 
   const result = await FlashcardModel.aggregate(pipeline);
 
-  if (!result || !result[0] || result[0].data.length === 0) {
-    throw new CustomError(404, "Flashcards not found");
-  }
-
-  const flashcards = result[0].data;
-  const totalFlashcards = result[0].meta[0]?.total || 0;
-
-  const meta = {
-    page: currentPage,
-    limit: pageLimit,
-    total: totalFlashcards,
-    pages: Math.ceil(totalFlashcards / pageLimit),
-  };
-
-  return { flashcards, meta };
+  return (
+    result[0] || {
+      meta: {
+        page: currentPage,
+        limit: pageLimit,
+        total: 0,
+        pages: 0,
+      },
+      data: [],
+    }
+  );
 };
-
-
 
 //update flashcard
 const updateFlashcard = async (

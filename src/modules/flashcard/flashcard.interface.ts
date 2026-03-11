@@ -32,9 +32,10 @@ export interface IUpdateFlashcard {
 
 
 export interface GetAllFlashcardsParams {
-  page?: string;
-  limit?: string;
-  sort?: string;
-  topicId?: string;
-  status?: string;
-}
+  page?: string | number;
+  limit?: string | number;
+  sortBy?: "assend" | "dessce";
+  filterBytopicId?: string;
+  status?: "active" | "inactive";
+  search?: string;
+};
