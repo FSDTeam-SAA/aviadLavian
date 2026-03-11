@@ -24,6 +24,15 @@ const getAllQuestions = async (query: any) => {
   if (query.difficulty) filter.difficulty = query.difficulty;
   if (query.isHidden !== undefined) filter.isHidden = query.isHidden === "true";
 
+ 
+  if (query.search) {
+    filter.$or = [
+      { questionText: { $regex: query.search, $options: "i" } },
+      { explanation: { $regex: query.search, $options: "i" } },
+      { topicId: { $regex: query.search, $options: "i" } },
+    ];
+  }
+
   // pagination
   const { page, limit, skip } = paginationHelper(query.page, query.limit);
 

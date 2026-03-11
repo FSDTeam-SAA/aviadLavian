@@ -11,6 +11,7 @@ import {
   getQuizHistoryService,
   getSingleQuestionResultService,
   deleteQuizService,
+  getAllQuizService,
 } from "./quiz.service";
 import { Types } from "mongoose";
 
@@ -209,3 +210,16 @@ export const deleteQuiz = asyncHandler(async (req: Request, res: Response) => {
 
   return ApiResponse.sendSuccess(res, 200, result.message, null);
 });
+
+export const getAllQuizController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await getAllQuizService(req.query);
+
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "All quizzes retrieved successfully",
+      result,
+    );
+  },
+);
