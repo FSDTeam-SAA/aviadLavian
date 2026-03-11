@@ -13,17 +13,18 @@ export const reviewFlashcard = asyncHandler(
     if (req.user?.role === "admin") throw new CustomError(403, "Admins are not allowed to take attempt flashcards");
 
 
-    const { progress, message } = await flashcardprogressService.reviewFlashcard(
+    const { progress } = await flashcardprogressService.reviewFlashcard(
       userId,
       data.flashcardId,
       data.result,
       data.customInterval
     );
+    
 
     ApiResponse.sendSuccess(
       res,
       200,
-      message,
+      "Flashcard progress updated successfully",
       progress
     );
   }

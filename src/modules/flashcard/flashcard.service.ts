@@ -26,6 +26,60 @@ const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.Fi
 
 //get flashcard by injuryId also user progress
 
+// const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
+//   const userId = req?.user?._id;
+//   const { page: pageParam, limit: limitParam } = req.query;
+//   const { page, limit, skip } = paginationHelper(pageParam, limitParam);
+
+//   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+//     throw new CustomError(400, "Invalid userId");
+//   }
+
+//   const filter = {
+//     topicId: injuryId,
+//     isActive: true,
+//   };
+
+//   const totalData = await FlashcardModel.countDocuments(filter);
+
+//   if (!totalData) {
+//     throw new CustomError(404, "Flashcard not found");
+//   }
+
+//   const flashcards = await FlashcardModel.find(filter)
+//     .skip(skip)
+//     .limit(limit)
+//     .lean();
+
+//   const flashcardIds = flashcards.map((item) => item._id);
+
+//   const progressList = await FlashcardProgressModel.find({
+//     userId: new mongoose.Types.ObjectId(userId),
+//     flashcardId: { $in: flashcardIds },
+//   })
+//     .select("flashcardId userAnswer")
+//     .lean();
+
+//   const progressMap = new Map(
+//     progressList.map((item) => [String(item.flashcardId), item.userAnswer])
+//   );
+
+//   const result = flashcards.map((flashcard) => ({
+//     ...flashcard,
+//     userAnswer: progressMap.get(String(flashcard._id)) || "",
+//   }));
+
+//   return {
+//     meta: {
+//       page,
+//       limit,
+//       totalData,
+//       totalPage: Math.ceil(totalData / limit),
+//     },
+//     data: result,
+//   };
+// };
+
 const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
   const userId = req?.user?._id;
   const { page: pageParam, limit: limitParam } = req.query;
@@ -35,50 +89,131 @@ const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
     throw new CustomError(400, "Invalid userId");
   }
 
-  const filter = {
-    topicId: injuryId,
-    isActive: true,
-  };
+  const now = new Date();
+  const userObjectId = new mongoose.Types.ObjectId(userId);
 
-  const totalData = await FlashcardModel.countDocuments(filter);
+  const matchTopicId = mongoose.Types.ObjectId.isValid(injuryId)
+    ? new mongoose.Types.ObjectId(injuryId)
+    : injuryId;
 
-  if (!totalData) {
-    throw new CustomError(404, "Flashcard not found");
-  }
+  const result = await FlashcardModel.aggregate([
+    {
+      $match: {
+        topicId: matchTopicId,
+        isActive: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "flashcardprogresses",
+        let: { flashcardId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$flashcardId", "$$flashcardId"] },
+                  { $eq: ["$userId", userObjectId] },
+                ],
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              userAnswer: 1,
+              lastReviewedAt: 1,
+              nextReviewAt: 1,
+              updatedAt: 1,
+            },
+          },
+          { $sort: { updatedAt: -1 } },
+          { $limit: 1 },
+        ],
+        as: "progress",
+      },
+    },
+    {
+      $addFields: {
+        progress: { $arrayElemAt: ["$progress", 0] },
+      },
+    },
+    {
+      $match: {
+        $or: [
+          // user never reviewed -> show
+          { progress: null },
 
-  const flashcards = await FlashcardModel.find(filter)
-    .skip(skip)
-    .limit(limit)
-    .lean();
+          // progress exists but nextReviewAt not set -> show
+          { "progress.nextReviewAt": null },
 
-  const flashcardIds = flashcards.map((item) => item._id);
+          // review time reached -> show
+          { "progress.nextReviewAt": { $lte: now } },
+        ],
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        question: 1,
+        answer: 1,
+        topicId: 1,
+        difficulty: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
+        lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
+        nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    {
+      $facet: {
+        meta: [{ $count: "totalData" }],
+        data: [{ $skip: skip }, { $limit: limit }],
+      },
+    },
+    {
+      $addFields: {
+        totalData: {
+          $ifNull: [{ $arrayElemAt: ["$meta.totalData", 0] }, 0],
+        },
+      },
+    },
+    {
+      $project: {
+        data: 1,
+        meta: {
+          page: { $literal: page },
+          limit: { $literal: limit },
+          totalData: "$totalData",
+          totalPage: {
+            $ceil: {
+              $divide: ["$totalData", limit],
+            },
+          },
+        },
+      },
+    },
+  ]);
 
-  const progressList = await FlashcardProgressModel.find({
-    userId: new mongoose.Types.ObjectId(userId),
-    flashcardId: { $in: flashcardIds },
-  })
-    .select("flashcardId userAnswer")
-    .lean();
-
-  const progressMap = new Map(
-    progressList.map((item) => [String(item.flashcardId), item.userAnswer])
-  );
-
-  const result = flashcards.map((flashcard) => ({
-    ...flashcard,
-    userAnswer: progressMap.get(String(flashcard._id)) || "",
-  }));
-
-  return {
+  const finalResult = result[0] || {
     meta: {
       page,
       limit,
-      totalData,
-      totalPage: Math.ceil(totalData / limit),
+      totalData: 0,
+      totalPage: 0,
     },
-    data: result,
+    data: [],
   };
+
+  return finalResult;
 };
+
+
+
 
 //get single flashcard
 const getSingleFlashcard = async (id: string) => {
