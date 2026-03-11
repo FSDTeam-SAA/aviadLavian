@@ -9,7 +9,7 @@ import { FlashcardProgressModel } from "../flashcardprogress/flashcardprogress.m
 const createFlashcard = async (data: ICreateFlashcard, image?: Express.Multer.File) => {
 
   //now create flashcard
-  const flashcard = await FlashcardModel.create(data);
+  const flashcard = (await FlashcardModel.create(data));
   if (!flashcard) throw new CustomError(400, "Flashcard not created");
 
   //now upload image
@@ -217,7 +217,7 @@ const getFlashcardByInjuryId = async (injuryId: string, req: any) => {
 
 //get single flashcard
 const getSingleFlashcard = async (id: string) => {
-  const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true });
+  const flashcard = await FlashcardModel.findOne({ _id: id, isActive: true }).populate("topicId");
   if (!flashcard) throw new CustomError(404, "Flashcard not found");
 
   return flashcard;
