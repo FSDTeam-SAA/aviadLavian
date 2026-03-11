@@ -31,11 +31,15 @@ export const getFlashcard = asyncHandler(async (req: Request, res: Response) => 
 
 //get all flashcards
 export const getAllFlashcards = asyncHandler(async (req: Request, res: Response) => {
+  const isAdmin = (req as any).user?.role === "admin";
 
-  const isAdmin = (req as any).user?.role === "admin"? true : false;
+  const { data, meta } = await flashcardService.getAllFlashcards(
+    req.query as any,
+    (req as any).user?._id,
+    isAdmin
+  );
 
-  const { flashcards, meta } = await flashcardService.getAllFlashcards(req.query, (req as any).user?._id, isAdmin);
-  ApiResponse.sendSuccess(res, 200, "Flashcards found ", flashcards, meta);
+  ApiResponse.sendSuccess(res, 200, "Flashcards found", data, meta);
 });
 
 //update flashcard
