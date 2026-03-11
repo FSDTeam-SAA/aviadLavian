@@ -61,11 +61,12 @@ const reviewFlashcard = async (
       (diffMinutes ? `${diffMinutes} minute(s)` : "") +
       (diffSeconds ? `${diffSeconds} second(s)` : "");
 
-    return {
-      progress,
-      message: `You cannot review this flashcard yet. Try again in ${waitMessage.trim()}`,
-      canReview: false,
-    };
+
+
+    throw new CustomError(
+      400,
+      `You must wait ${waitMessage} before you can review this flashcard again.`
+    );
   }
 
   // Create progress if first time
