@@ -19,19 +19,38 @@ export const getQuestionsByTopicService = async (
     topicId: { $regex: `^${topicId}$`, $options: "i" },
   }).lean();
 
-  const attemptedSet = new Set(
-    attemptedQuestions.map((q) => q.questionId.toString()),
-  );
+  const attemptMap = new Map<
+    string,
+    { isCorrect: boolean; selectedOptionId: string }
+  >();
+  attemptedQuestions.forEach((attempt) => {
+    attemptMap.set(attempt.questionId.toString(), {
+      isCorrect: attempt.isCorrect,
+      selectedOptionId: attempt.selectedOptionId.toString(),
+    });
+  });
 
-  const questionsWithSerial = questions.map((question, index) => ({
-    ...question,
-    serialNumber: index + 1,
-    isAttempted: attemptedSet.has(question._id.toString()),
-  }));
+  const questionsWithSerial = questions.map((question, index) => {
+    const attempt = attemptMap.get(question._id.toString());
+    const isAttempted = !!attempt;
+
+    return {
+      ...question,
+      serialNumber: index + 1,
+      isAttempted,
+      isCorrect: attempt?.isCorrect ?? null,
+      // ✅ attempt করলে isCorrect দেখাবে, না করলে hide
+      options: question.options.map((opt) => ({
+        _id: opt._id,
+        text: opt.text,
+        selectedCount: opt.selectedCount,
+        ...(isAttempted && { isCorrect: opt.isCorrect }),
+      })),
+    };
+  });
 
   return questionsWithSerial;
 };
-
 export const attemptQuestionBankService = async (
   userId: Types.ObjectId,
   questionId: Types.ObjectId,
@@ -110,10 +129,12 @@ export const getQuestionDetailsService = async (
     throw new Error("Question not found");
   }
 
-  const isAttempted = await QuestionBankAttemptModel.findOne({
+  const attemptRecord = await QuestionBankAttemptModel.findOne({
     userId,
     questionId,
-  });
+  }).lean();
+
+  const isAttempted = !!attemptRecord;
 
   const allQuestionsInTopic = await QuestionModel.find({
     topicId: question.topicId,
@@ -133,15 +154,18 @@ export const getQuestionDetailsService = async (
       ? allQuestionsInTopic[currentIndex + 1]!._id
       : null;
 
+  const { options, explanation, ...questionWithoutSensitiveData } = question;
+
   return {
-    ...question,
-    isAttempted: !!isAttempted,
+    ...questionWithoutSensitiveData,
+    isAttempted,
     nextQuestionId,
-    optionStats: question.options.map((opt) => ({
+    explanation: isAttempted ? explanation : undefined,
+    optionStats: options.map((opt) => ({
       optionId: opt._id,
       text: opt.text,
       selectedCount: opt.selectedCount ?? 0,
-      isCorrect: opt.isCorrect,
+      ...(isAttempted && { isCorrect: opt.isCorrect }),
     })),
   };
 };
