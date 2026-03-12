@@ -273,6 +273,8 @@ const getAllFlashcards = async (
     limit,
     sortBy = "assend",
     filterBytopicId = "",
+    filterByAcuity = "",
+    filterByAgeGroup = "",
     status = "active",
     search,
   }: GetAllFlashcardsParams,
@@ -323,17 +325,34 @@ const getAllFlashcards = async (
   const pipeline: any[] = [
     { $match: match },
 
-    // populate topicId from injuries
     {
       $lookup: {
         from: "injuries",
         let: {
           topicIdObj: {
-            $cond: [
-              { $eq: [{ $type: "$topicId" }, "objectId"] },
-              "$topicId",
-              { $toObjectId: "$topicId" },
-            ],
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: [{ $type: "$topicId" }, "objectId"] },
+                  then: "$topicId",
+                },
+                {
+                  case: {
+                    $and: [
+                      { $eq: [{ $type: "$topicId" }, "string"] },
+                      {
+                        $regexMatch: {
+                          input: "$topicId",
+                          regex: /^[a-fA-F0-9]{24}$/,
+                        },
+                      },
+                    ],
+                  },
+                  then: { $toObjectId: "$topicId" },
+                },
+              ],
+              default: null,
+            },
           },
         },
         pipeline: [
@@ -370,6 +389,11 @@ const getAllFlashcards = async (
         topicId: { $arrayElemAt: ["$topicId", 0] },
       },
     },
+    {
+      $match: {
+        topicId: { $ne: null },
+      },
+    },
   ];
 
   // filter by populated topicId._id
@@ -377,6 +401,30 @@ const getAllFlashcards = async (
     pipeline.push({
       $match: {
         "topicId._id": new Types.ObjectId(filterBytopicId),
+      },
+    });
+  }
+
+  // filter by populated topicId.Acuity
+  if (filterByAcuity?.trim()) {
+    pipeline.push({
+      $match: {
+        "topicId.Acuity": {
+          $regex: `^${filterByAcuity.trim()}$`,
+          $options: "i",
+        },
+      },
+    });
+  }
+
+  // filter by populated topicId.Age_Group
+  if (filterByAgeGroup?.trim()) {
+    pipeline.push({
+      $match: {
+        "topicId.Age_Group": {
+          $regex: `^${filterByAgeGroup.trim()}$`,
+          $options: "i",
+        },
       },
     });
   }
@@ -394,8 +442,9 @@ const getAllFlashcards = async (
           { "topicId.Name": regex },
           { "topicId.Primary_Body_Region": regex },
           { "topicId.Secondary_Body_Region": regex },
-          { "topicId.Acuity": regex },
           { "topicId.Age_Group": regex },
+          { "topicId.Tissue_Type": regex },
+          { "topicId.Acuity": regex },
         ],
       },
     });
@@ -457,41 +506,37 @@ const getAllFlashcards = async (
   }
 
   if (isAdmin) {
-    pipeline.push(
-      {
-        $project: {
-          _id: 1,
-          question: 1,
-          answer: 1,
-          topicId: 1,
-          difficulty: 1,
-          isActive: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          __v: 1,
-        },
-      }
-    );
+    pipeline.push({
+      $project: {
+        _id: 1,
+        question: 1,
+        answer: 1,
+        topicId: 1,
+        difficulty: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+      },
+    });
   } else {
-    pipeline.push(
-      {
-        $project: {
-          _id: 1,
-          question: 1,
-          answer: 1,
-          topicId: 1,
-          difficulty: 1,
-          isActive: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          __v: 1,
-          progress: 1,
-          userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
-          lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
-          nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
-        },
-      }
-    );
+    pipeline.push({
+      $project: {
+        _id: 1,
+        question: 1,
+        answer: 1,
+        topicId: 1,
+        difficulty: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        progress: 1,
+        userAnswer: { $ifNull: ["$progress.userAnswer", ""] },
+        lastReviewedAt: { $ifNull: ["$progress.lastReviewedAt", null] },
+        nextReviewAt: { $ifNull: ["$progress.nextReviewAt", null] },
+      },
+    });
   }
 
   pipeline.push(
