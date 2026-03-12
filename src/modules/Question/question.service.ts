@@ -75,7 +75,6 @@ const getAllQuestions = async (query: any) => {
     filter.$or = [
       { questionText: qSearch },
       { explanation: qSearch },
-      { topicId: { $regex: query.search, $options: "i" } }, // old logic preserved
     ];
   }
 
@@ -84,6 +83,7 @@ const getAllQuestions = async (query: any) => {
 
   const questions = await QuestionModel.find(filter)
     .populate("articleId", "name")
+    .populate("topicIds")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -109,7 +109,7 @@ const updateQuestion = async (
 ) => {
   const allowedFields = {
     articleId: payload.articleId,
-    topicId: payload.topicId,
+    topicIds: payload.topicIds,
     questionText: payload.questionText,
     explanation: payload.explanation,
     marks: payload.marks,

@@ -5,6 +5,7 @@ import CustomError from "../../helpers/CustomError";
 import { paginationHelper } from "../../utils/pagination";
 import { InjuryModel } from "../injury/injury.model";
 import { QuestionModel } from "../Question/question.model";
+import { ArticleModel } from "../Article/article.model";
 
 // ── Population Options ──
 const populationOptions = [
@@ -25,7 +26,7 @@ const populationOptions = [
     {
         path: "quizzes.quizId",
         populate: {
-            path: "topicId",
+            path: "topicIds",
             model: "Injury",
         },
     },
@@ -317,7 +318,7 @@ const removeArticleFromPlan = async (
 const addQuizToPlan = async (
     userId: string,
     planId: string,
-    data: { primaryBodyRegion: string }
+    data: { quizId: string }
 ) => {
     const plan = await LearningPlanModel.findOne({
         _id: planId,
@@ -326,56 +327,31 @@ const addQuizToPlan = async (
     });
     if (!plan) throw new CustomError(404, "Learning plan not found");
 
-    // 1. Find Injury matching the primary body region
-    const injury = await InjuryModel.findOne({
-        Primary_Body_Region: new RegExp(`^${data.primaryBodyRegion}$`, "i"),
-    });
-    if (!injury) {
-        throw new CustomError(
-            404,
-            `No injury found for region: ${data.primaryBodyRegion}`
-        );
+    const question = await QuestionModel.findById(data.quizId);
+    if (!question || question.isDeleted) {
+        throw new CustomError(404, "Question not found");
     }
 
-    // 2. Find Questions by topicId (string matching primaryBodyRegion)
-    const questions = await QuestionModel.find({
-        topicId: data.primaryBodyRegion,
-        isDeleted: false,
-    });
-
-    if (questions.length > 0) {
-        // 3. Update those questions' topicId to Injury ObjectId
-        await QuestionModel.updateMany(
-            { topicId: data.primaryBodyRegion },
-            { $set: { topicId: injury._id } }
-        );
+    // Sync topics from parent Article
+    const article = await ArticleModel.findById(question.articleId);
+    if (!article) {
+        throw new CustomError(404, "Parent article not found for this question");
     }
 
-    // 4. Find all questions for this injury (including any previously updated)
-    const updatedQuestions = await QuestionModel.find({
-        topicId: injury._id,
-        isDeleted: false,
-    });
+    // Update question's topicIds from article's topicIds
+    question.topicIds = article.topicIds as Types.ObjectId[];
+    await question.save();
 
-    if (updatedQuestions.length === 0) {
-        throw new CustomError(
-            404,
-            `No questions found for region: ${data.primaryBodyRegion}`
-        );
-    }
-
-    // 5. Add to learning plan quizzes
-    for (const q of updatedQuestions) {
-        const alreadyExists = plan.quizzes.some(
-            (quiz: any) => quiz.quizId.toString() === q._id.toString()
-        );
-        if (!alreadyExists) {
-            plan.quizzes.push({
-                quizId: q._id as Types.ObjectId,
-                isAnswered: "unanswered",
-                answeredAt: null,
-            });
-        }
+    // Add to learning plan quizzes
+    const alreadyExists = plan.quizzes.some(
+        (quiz: any) => quiz.quizId.toString() === question._id.toString()
+    );
+    if (!alreadyExists) {
+        plan.quizzes.push({
+            quizId: question._id as Types.ObjectId,
+            isAnswered: "unanswered",
+            answeredAt: null,
+        });
     }
 
     await plan.save();

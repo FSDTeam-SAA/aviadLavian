@@ -38,7 +38,7 @@ export const updateArticleProgressSchema = z.object({
 });
 
 export const addQuizSchema = z.object({
-    primaryBodyRegion: z.string().min(1, "primaryBodyRegion is required"),
+    quizId: z.string().min(1, "quizId is required"),
 });
 
 export const updateQuizProgressSchema = z.object({
