@@ -14,6 +14,11 @@ import quizRoutes from "../modules/quiz/quiz.routes";
 import { learningPlanRoute } from "../modules/learningplan/learningplan.route";
 import { ArticleAnnotationRoute } from "../modules/ArticleAnnotation/articleAnnotation.route";
 import { progressRoute } from "../modules/progress/progress.routes";
+import { authGuard } from "../middleware/auth.middleware";
+import {
+  adminFeedbackRouter,
+  feedbackRouter,
+} from "../modules/feedback/feedback.routes";
 
 router.use("/user", userRoute);
 router.use("/flashcard", flashcardRoute);
@@ -25,16 +30,18 @@ router.use("/article", articleRoutes);
 router.use("/article-annotations", ArticleAnnotationRoute);
 router.use("/learning-plan", learningPlanRoute);
 
-
 // Questions and quiz
 router.use("/questionbank", questionBankRoutes);
 router.use("/examattempt", examAttemptRoutes);
 router.use("/quiz", quizRoutes);
 
+// feedback
 
 //progress for admin and user
 router.use("/progress", progressRoute);
 
 
+router.use("/feedback", authGuard, feedbackRouter);
+router.use("/admin/feedback", authGuard, adminFeedbackRouter);
 
 export default router;

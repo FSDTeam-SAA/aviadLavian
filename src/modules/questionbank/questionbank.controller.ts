@@ -5,6 +5,7 @@ import ApiResponse from "../../utils/apiResponse";
 import { Types } from "mongoose";
 import {
   attemptQuestionBankService,
+  getAllQuestionBankAttemptsService,
   getAttemptByTopicService,
   getQuestionDetailsService,
   getQuestionsByTopicService,
@@ -113,5 +114,18 @@ export const questionBankEntryController = asyncHandler(
 
     const result = await questionBankEntryService(userId, req.query);
     ApiResponse.sendSuccess(res, 200, "Question bank entry", result);
+  },
+);
+
+export const getAllQuestionBankAttemptsController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await getAllQuestionBankAttemptsService();
+
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "All Question Bank Attempts retrieved successfully",
+      result,
+    );
   },
 );

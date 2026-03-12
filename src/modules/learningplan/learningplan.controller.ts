@@ -82,6 +82,29 @@ const removeArticleFromPlan = asyncHandler(async (req: Request, res: Response) =
     ApiResponse.sendSuccess(res, 200, "Article removed from learning plan", result);
 });
 
+const addQuizToPlan = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user._id;
+    const planId = req.params.planId as string;
+    const result = await learningPlanService.addQuizToPlan(userId, planId, req.body);
+    ApiResponse.sendSuccess(res, 201, "Quiz added to learning plan", result);
+});
+
+const updateQuizProgress = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user._id;
+    const planId = req.params.planId as string;
+    const quizId = req.params.quizId as string;
+    const result = await learningPlanService.updateQuizProgress(userId, planId, quizId, req.body);
+    ApiResponse.sendSuccess(res, 200, "Quiz progress updated", result);
+});
+
+const removeQuizFromPlan = asyncHandler(async (req: Request, res: Response) => {
+    const userId = (req as any).user._id;
+    const planId = req.params.planId as string;
+    const quizId = req.params.quizId as string;
+    const result = await learningPlanService.removeQuizFromPlan(userId, planId, quizId);
+    ApiResponse.sendSuccess(res, 200, "Quiz removed from learning plan", result);
+});
+
 export const learningPlanController = {
     createLearningPlan,
     getAllLearningPlans,
@@ -94,4 +117,7 @@ export const learningPlanController = {
     addArticleToPlan,
     updateArticleProgress,
     removeArticleFromPlan,
+    addQuizToPlan,
+    updateQuizProgress,
+    removeQuizFromPlan,
 };

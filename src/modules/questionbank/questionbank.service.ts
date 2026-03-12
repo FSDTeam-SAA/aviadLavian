@@ -269,3 +269,13 @@ export const questionBankEntryService = async (
     data: paginatedData,
   };
 };
+
+export const getAllQuestionBankAttemptsService = async () => {
+  const attempts = await QuestionBankAttemptModel.find({})
+    .populate("userId", "name email")
+    .populate("questionId", "questionText topicId")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  return attempts;
+};
