@@ -13,6 +13,7 @@ import examAttemptRoutes from "../modules/examattempt/examattempt.routes";
 import quizRoutes from "../modules/quiz/quiz.routes";
 import { learningPlanRoute } from "../modules/learningplan/learningplan.route";
 import { ArticleAnnotationRoute } from "../modules/ArticleAnnotation/articleAnnotation.route";
+import { progressRoute } from "../modules/progress/progress.routes";
 
 router.use("/user", userRoute);
 router.use("/flashcard", flashcardRoute);
@@ -29,6 +30,10 @@ router.use("/learning-plan", learningPlanRoute);
 router.use("/questionbank", questionBankRoutes);
 router.use("/examattempt", examAttemptRoutes);
 router.use("/quiz", quizRoutes);
+
+
+//progress for admin and user
+router.use("/progress", progressRoute);
 
 
 
