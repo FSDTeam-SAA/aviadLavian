@@ -3,6 +3,8 @@ import { LearningPlanModel } from "./learningplan.model";
 import { IGetAllLearningPlansParams } from "./learningplan.interface";
 import CustomError from "../../helpers/CustomError";
 import { paginationHelper } from "../../utils/pagination";
+import { InjuryModel } from "../injury/injury.model";
+import { QuestionModel } from "../Question/question.model";
 
 // ── Population Options ──
 const populationOptions = [
@@ -17,6 +19,13 @@ const populationOptions = [
         path: "articles.articleId",
         populate: {
             path: "topicIds",
+            model: "Injury",
+        },
+    },
+    {
+        path: "quizzes.quizId",
+        populate: {
+            path: "topicId",
             model: "Injury",
         },
     },
@@ -176,8 +185,11 @@ const updateFlashcardProgress = async (
     }
 
     entry.isAnswered = progressData.isAnswered as any;
-    entry.answeredAt =
-        progressData.isAnswered === "answered" ? new Date() : null;
+    entry.answeredAt = ["incorrect", "unsure", "correct"].includes(
+        progressData.isAnswered
+    )
+        ? new Date()
+        : null;
 
     await plan.save();
 
@@ -301,6 +313,137 @@ const removeArticleFromPlan = async (
     return plan;
 };
 
+// ── Add Quiz (Questions by Region) to Plan ──
+const addQuizToPlan = async (
+    userId: string,
+    planId: string,
+    data: { primaryBodyRegion: string }
+) => {
+    const plan = await LearningPlanModel.findOne({
+        _id: planId,
+        userId: new Types.ObjectId(userId),
+        isActive: true,
+    });
+    if (!plan) throw new CustomError(404, "Learning plan not found");
+
+    // 1. Find Injury matching the primary body region
+    const injury = await InjuryModel.findOne({
+        Primary_Body_Region: new RegExp(`^${data.primaryBodyRegion}$`, "i"),
+    });
+    if (!injury) {
+        throw new CustomError(
+            404,
+            `No injury found for region: ${data.primaryBodyRegion}`
+        );
+    }
+
+    // 2. Find Questions by topicId (string matching primaryBodyRegion)
+    const questions = await QuestionModel.find({
+        topicId: data.primaryBodyRegion,
+        isDeleted: false,
+    });
+
+    if (questions.length > 0) {
+        // 3. Update those questions' topicId to Injury ObjectId
+        await QuestionModel.updateMany(
+            { topicId: data.primaryBodyRegion },
+            { $set: { topicId: injury._id } }
+        );
+    }
+
+    // 4. Find all questions for this injury (including any previously updated)
+    const updatedQuestions = await QuestionModel.find({
+        topicId: injury._id,
+        isDeleted: false,
+    });
+
+    if (updatedQuestions.length === 0) {
+        throw new CustomError(
+            404,
+            `No questions found for region: ${data.primaryBodyRegion}`
+        );
+    }
+
+    // 5. Add to learning plan quizzes
+    for (const q of updatedQuestions) {
+        const alreadyExists = plan.quizzes.some(
+            (quiz: any) => quiz.quizId.toString() === q._id.toString()
+        );
+        if (!alreadyExists) {
+            plan.quizzes.push({
+                quizId: q._id as Types.ObjectId,
+                isAnswered: "unanswered",
+                answeredAt: null,
+            });
+        }
+    }
+
+    await plan.save();
+
+    const populated = await LearningPlanModel.findById(plan._id).populate(
+        populationOptions
+    );
+    return populated;
+};
+
+// ── Update Quiz Progress ──
+const updateQuizProgress = async (
+    userId: string,
+    planId: string,
+    quizId: string,
+    progressData: { isAnswered: string }
+) => {
+    const plan = await LearningPlanModel.findOne({
+        _id: planId,
+        userId: new Types.ObjectId(userId),
+        isActive: true,
+    });
+    if (!plan) throw new CustomError(404, "Learning plan not found");
+
+    const entry = plan.quizzes.find(
+        (q: any) => q.quizId.toString() === quizId
+    );
+    if (!entry) {
+        throw new CustomError(404, "Quiz question not found in this learning plan");
+    }
+
+    entry.isAnswered = progressData.isAnswered as any;
+    entry.answeredAt = ["incorrect", "unsure", "correct"].includes(
+        progressData.isAnswered
+    )
+        ? new Date()
+        : null;
+
+    await plan.save();
+
+    const populated = await LearningPlanModel.findById(plan._id).populate(
+        populationOptions
+    );
+    return populated;
+};
+
+// ── Remove Quiz from Plan ──
+const removeQuizFromPlan = async (
+    userId: string,
+    planId: string,
+    quizId: string
+) => {
+    const plan = await LearningPlanModel.findOneAndUpdate(
+        {
+            _id: planId,
+            userId: new Types.ObjectId(userId),
+            isActive: true,
+        },
+        {
+            $pull: { quizzes: { quizId: new Types.ObjectId(quizId) } },
+        },
+        { new: true }
+    ).populate(populationOptions);
+
+    if (!plan) throw new CustomError(404, "Learning plan not found");
+    return plan;
+};
+
 export const learningPlanService = {
     createLearningPlan,
     getAllLearningPlans,
@@ -313,4 +456,7 @@ export const learningPlanService = {
     addArticleToPlan,
     updateArticleProgress,
     removeArticleFromPlan,
+    addQuizToPlan,
+    updateQuizProgress,
+    removeQuizFromPlan,
 };

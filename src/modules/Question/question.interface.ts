@@ -9,7 +9,7 @@ export interface IOption {
 
 export interface IQuestion {
   articleId: Types.ObjectId;
-  topicId: string;
+  topicId: string | Types.ObjectId;
   questionText: string;
   options: IOption[];
 

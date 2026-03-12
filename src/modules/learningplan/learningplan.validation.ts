@@ -21,11 +21,11 @@ export const updateLearningPlanSchema = z.object({
 
 export const addFlashcardSchema = z.object({
     flashcardId: z.string().min(1, "flashcardId is required"),
-    isAnswered: z.enum(["unanswered", "answered", "skipped"]).optional().default("unanswered"),
+    isAnswered: z.enum(["unanswered", "incorrect", "unsure", "correct", "skipped"]).optional().default("unanswered"),
 });
 
 export const updateFlashcardProgressSchema = z.object({
-    isAnswered: z.enum(["unanswered", "answered", "skipped"]),
+    isAnswered: z.enum(["unanswered", "incorrect", "unsure", "correct", "skipped"]),
 });
 
 export const addArticleSchema = z.object({
@@ -35,4 +35,12 @@ export const addArticleSchema = z.object({
 
 export const updateArticleProgressSchema = z.object({
     isRead: z.enum(["unread", "read", "skipped"]),
+});
+
+export const addQuizSchema = z.object({
+    primaryBodyRegion: z.string().min(1, "primaryBodyRegion is required"),
+});
+
+export const updateQuizProgressSchema = z.object({
+    isAnswered: z.enum(["unanswered", "incorrect", "unsure", "correct", "skipped"]),
 });

@@ -10,7 +10,7 @@ const learningPlanFlashcardSchema = new Schema(
         },
         isAnswered: {
             type: String,
-
+            enum: ["unanswered", "incorrect", "unsure", "correct", "skipped"],
             default: "unanswered",
         },
         answeredAt: {
@@ -40,6 +40,26 @@ const learningPlanArticleSchema = new Schema(
     { _id: true }
 );
 
+const learningPlanQuizSchema = new Schema(
+    {
+        quizId: {
+            type: Schema.Types.ObjectId,
+            ref: "Question",
+            required: true,
+        },
+        isAnswered: {
+            type: String,
+            enum: ["unanswered", "incorrect", "unsure", "correct", "skipped"],
+            default: "unanswered",
+        },
+        answeredAt: {
+            type: Date,
+            default: null,
+        },
+    },
+    { _id: true }
+);
+
 const learningPlanSchema = new Schema<ILearningPlan>(
     {
         userId: {
@@ -61,6 +81,10 @@ const learningPlanSchema = new Schema<ILearningPlan>(
         },
         articles: {
             type: [learningPlanArticleSchema],
+            default: [],
+        },
+        quizzes: {
+            type: [learningPlanQuizSchema],
             default: [],
         },
         isActive: {

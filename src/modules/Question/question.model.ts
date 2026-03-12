@@ -17,7 +17,7 @@ const questionSchema = new Schema<IQuestion>(
       ref: "Article",
       required: true,
     },
-    topicId: { type: String, required: true },
+    topicId: { type: Schema.Types.Mixed, required: true },
     questionText: { type: String, required: true },
     options: { type: [optionSchema], required: true },
     explanation: { type: String, required: true },
