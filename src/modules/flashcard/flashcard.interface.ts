@@ -36,6 +36,8 @@ export interface GetAllFlashcardsParams {
   limit?: string | number;
   sortBy?: "assend" | "dessce";
   filterBytopicId?: string;
+  filterByAcuity?: string;
+  filterByAgeGroup?: string;
   status?: "active" | "inactive";
   search?: string;
 };

@@ -48,18 +48,18 @@ export const login = asyncHandler(async (req, res) => {
     req.body.email,
     req.body.password,
   );
+  
+  // if (config.env === "development") {
+  // res.cookie("refreshToken", refreshToken, {
+  //   httpOnly: true,
+  //   sameSite: "none",
+  // });
 
-  res.cookie("refreshToken", refreshToken, {
-    httpOnly: true,
-    sameSite: "none",
-  });
-
-  if (config.env === "development") {
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      sameSite: "none",
-    });
-  }
+  //   res.cookie("accessToken", accessToken, {
+  //     httpOnly: true,
+  //     sameSite: "none",
+  //   });
+  // }
 
   ApiResponse.sendSuccess(res, 200, "Logged in", {
     email: user.email,

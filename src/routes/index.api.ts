@@ -13,6 +13,7 @@ import examAttemptRoutes from "../modules/examattempt/examattempt.routes";
 import quizRoutes from "../modules/quiz/quiz.routes";
 import { learningPlanRoute } from "../modules/learningplan/learningplan.route";
 import { ArticleAnnotationRoute } from "../modules/ArticleAnnotation/articleAnnotation.route";
+import { progressRoute } from "../modules/progress/progress.routes";
 import { authGuard } from "../middleware/auth.middleware";
 import {
   adminFeedbackRouter,
@@ -35,6 +36,10 @@ router.use("/examattempt", examAttemptRoutes);
 router.use("/quiz", quizRoutes);
 
 // feedback
+
+//progress for admin and user
+router.use("/progress", progressRoute);
+
 
 router.use("/feedback", authGuard, feedbackRouter);
 router.use("/admin/feedback", authGuard, adminFeedbackRouter);
