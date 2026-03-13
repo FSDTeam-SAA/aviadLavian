@@ -442,9 +442,7 @@ const getAllFlashcards = async (
           { "topicId.Name": regex },
           { "topicId.Primary_Body_Region": regex },
           { "topicId.Secondary_Body_Region": regex },
-          { "topicId.Age_Group": regex },
           { "topicId.Tissue_Type": regex },
-          { "topicId.Acuity": regex },
         ],
       },
     });

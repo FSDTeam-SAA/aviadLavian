@@ -1,5 +1,5 @@
 import express from "express";
-import { createFlashcard, deleteFlashcard, getAllFlashcards, getFlashcard, getFlashcardByInjuryId, updateFlashcard } from "./flashcard.controller";
+import { createFlashcard, deleteFlashcard, getAgeGroupAndAcuity, getAllFlashcards, getFlashcard, getFlashcardByInjuryId, updateFlashcard } from "./flashcard.controller";
 import { validateRequest } from "../../middleware/validateRequest.middleware";
 import { createFlashcardSchema, updateFlashcardSchema } from "./flashcard.validation";
 import { upload } from "../../middleware/multer.midleware";
@@ -13,5 +13,8 @@ router.get("/get-flashcard/:flashcardId", getFlashcard);
 router.get("/get-flashcards", authGuard, allowRole("admin", "user"), getAllFlashcards);
 router.patch("/update-flashcard/:flashcardId", authGuard, allowRole("admin"), upload.single("image"), validateRequest(updateFlashcardSchema), updateFlashcard);
 router.delete("/delete-flashcard/:flashcardId", authGuard, allowRole("admin"), deleteFlashcard);
+
+//get all age group and acuity
+router.get("/get-age-group-and-acuity", getAgeGroupAndAcuity);
 
 export default router;
