@@ -11,6 +11,7 @@ import {
   getExamResultByQuestionIdService,
   deleteExamService,
   duplicateExamService,
+  getAllExamService,
 } from "./examattempt.service";
 import { Types } from "mongoose";
 
@@ -192,3 +193,16 @@ export const duplicateExamController = async (req: Request, res: Response) => {
     data: newExam,
   });
 };
+
+export const getAllExamController = asyncHandler(
+  async (req: Request, res: Response) => {
+    const result = await getAllExamService(req.query);
+
+    ApiResponse.sendSuccess(
+      res,
+      200,
+      "All exams retrieved successfully",
+      result,
+    );
+  },
+);

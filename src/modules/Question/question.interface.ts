@@ -9,7 +9,7 @@ export interface IOption {
 
 export interface IQuestion {
   articleId: Types.ObjectId;
-  topicId: string;
+  topicIds: Types.ObjectId[];
   questionText: string;
   options: IOption[];
 
@@ -26,7 +26,7 @@ export interface IQuestion {
 
 export interface IUpdateQuestion {
   articleId?: Types.ObjectId;
-  topicId?: string;
+  topicIds?: Types.ObjectId[];
   questionText?: string;
   explanation?: string;
   marks?: number;

@@ -8,8 +8,9 @@ import {
   getExamResultByQuestionIdController,
   deleteExamController,
   duplicateExamController,
+  getAllExamController,
 } from "./examattempt.controller";
-import { authGuard } from "../../middleware/auth.middleware";
+import { allowRole, authGuard } from "../../middleware/auth.middleware";
 
 const router = Router();
 
@@ -32,5 +33,12 @@ router.get(
 router.delete("/delete/:examId", authGuard, deleteExamController);
 
 router.post("/exam/:examId/duplicate", authGuard, duplicateExamController);
+
+router.get(
+  "/admin/get-all-exams",
+  authGuard,
+  allowRole("admin"),
+  getAllExamController,
+);
 const examAttemptRoutes = router;
 export default examAttemptRoutes;

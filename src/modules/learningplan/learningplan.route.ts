@@ -8,6 +8,8 @@ import {
     updateFlashcardProgressSchema,
     addArticleSchema,
     updateArticleProgressSchema,
+    addQuizSchema,
+    updateQuizProgressSchema,
 } from "./learningplan.validation";
 import { authGuard } from "../../middleware/auth.middleware";
 
@@ -78,6 +80,27 @@ router.delete(
     "/:planId/article/:articleId",
     authGuard,
     learningPlanController.removeArticleFromPlan
+);
+
+// ── Quiz operations within a plan ──
+router.post(
+    "/:planId/quiz",
+    authGuard,
+    validateRequest(addQuizSchema),
+    learningPlanController.addQuizToPlan
+);
+
+router.patch(
+    "/:planId/quiz/:quizId",
+    authGuard,
+    validateRequest(updateQuizProgressSchema),
+    learningPlanController.updateQuizProgress
+);
+
+router.delete(
+    "/:planId/quiz/:quizId",
+    authGuard,
+    learningPlanController.removeQuizFromPlan
 );
 
 export const learningPlanRoute = router;

@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import { QuestionModel } from "../Question/question.model";
 import { QuizModel } from "./quiz.models";
+import { paginationHelper } from "../../utils/pagination";
 
 export const createQuizService = async (
   userId: Types.ObjectId,
@@ -28,9 +29,7 @@ export const createQuizService = async (
     throw new Error("No questions available for the selected topics");
   }
 
-
   const shuffled = [...allQuestions].sort(() => Math.random() - 0.5);
-
 
   const selectedCount = Math.min(questionCount, shuffled.length);
   const selectedQuestions = shuffled.slice(0, selectedCount);
@@ -493,4 +492,36 @@ export const deleteQuizService = async (
   await QuizModel.deleteOne({ _id: quizId });
 
   return { message: "Quiz deleted successfully" };
+};
+
+export const getAllQuizService = async (query: any) => {
+  const { page, limit, skip } = paginationHelper(query.page, query.limit);
+
+  const filter: any = {};
+
+  if (query.mode) {
+    filter.mode = query.mode;
+  }
+
+  const quizzes = await QuizModel.find(filter)
+    .populate("userId", "name email")
+    .select(
+      "quizName topicIds mode totalQuestions attemptedQuestions correctAnswers incorrectAnswers scorePercentage obtainedMarks totalMarks status timeSpentSeconds startedAt submittedAt",
+    )
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  const total = await QuizModel.countDocuments(filter);
+
+  return {
+    meta: {
+      page,
+      limit,
+      total,
+      totalPage: Math.ceil(total / limit),
+    },
+    data: quizzes,
+  };
 };

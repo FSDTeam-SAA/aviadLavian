@@ -48,7 +48,6 @@ export const resetPasswordSchema = z
   })
   .strict();
 
-
 export const updateUserSchema = z
   .object({
     FirstName: z.string().min(1, "First name cannot be empty").optional(),
@@ -73,18 +72,18 @@ export const updateUserSchema = z
     status: z.enum(["active", "inactive", "blocked"]).optional(),
 
     dateOfBirth: z.coerce
-      .date().refine((value) => {
+      .date()
+      .refine((value) => {
         const minDate = new Date("1900-01-01");
         const maxDate = new Date();
         return value >= minDate && value <= maxDate;
       })
-      .optional()
+      .optional(),
   })
   .strict();
 
-
-  //update status any user by admin only
-  export const updateStatusSchema = z
+//update status any user by admin only
+export const updateStatusSchema = z
   .object({
     status: z.enum(["active", "inactive", "blocked"]).optional(),
   })
@@ -104,8 +103,8 @@ export const changePasswordSchema = z
     path: ["newPassword"],
   });
 
-  //update user by admin using id
-  export const updateUserByIDSchema = z
+//update user by admin using id
+export const updateUserByIDSchema = z
   .object({
     FirstName: z.string().min(1, "First name cannot be empty").optional(),
 
@@ -114,4 +113,4 @@ export const changePasswordSchema = z
     country: z.string().min(1, "Country cannot be empty").optional(),
     status: z.enum(["active", "inactive", "blocked"]).optional(),
   })
-  .strict();  
+  .strict();
