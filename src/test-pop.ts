@@ -18,13 +18,13 @@ async function testPopulation() {
         console.log("Plan found:", plan.name || "Untitled");
 
         if (plan.flashcards && plan.flashcards.length > 0) {
-            console.log("First Flashcard Topic:", JSON.stringify((plan.flashcards[0].flashcardId as any)?.topicId, null, 2));
+            console.log("First Flashcard Topic:", JSON.stringify((plan.flashcards[0]!.flashcardId as any)?.topicId, null, 2));
         } else {
             console.log("No flashcards in plan");
         }
 
         if (plan.articles && plan.articles.length > 0) {
-            console.log("First Article Topics:", JSON.stringify((plan.articles[0].articleId as any)?.topicIds, null, 2));
+            console.log("First Article Topics:", JSON.stringify((plan.articles[0]!.articleId as any)?.topicIds, null, 2));
         } else {
             console.log("No articles in plan");
         }
