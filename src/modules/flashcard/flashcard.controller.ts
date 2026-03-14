@@ -3,6 +3,7 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import ApiResponse from "../../utils/apiResponse";
 import { ICreateFlashcard, IUpdateFlashcard } from "./flashcard.interface";
 import { flashcardService } from "./flashcard.service";
+import { InjuryModel } from "../injury/injury.model";
 
 //create flashcard
 export const createFlashcard = asyncHandler(async (req: Request, res: Response) => {
@@ -39,7 +40,9 @@ export const getAllFlashcards = asyncHandler(async (req: Request, res: Response)
     isAdmin
   );
 
-  ApiResponse.sendSuccess(res, 200, "Flashcards found", data, meta);
+  const message = data.length > 0 ? "Flashcards found" : "No flashcards found";  
+
+  ApiResponse.sendSuccess(res, 200, message, data, meta[0]);
 });
 
 //update flashcard
@@ -60,3 +63,17 @@ export const deleteFlashcard = asyncHandler(async (req: Request, res: Response) 
     question: flashcard.question
   });
 });
+
+
+//get all acuity and age group
+export const getAgeGroupAndAcuity = async (req: Request, res: Response) => {
+  const [ageGroups, acuities] = await Promise.all([
+    InjuryModel.distinct("Age_Group", { Age_Group: { $nin: ["", null] } }),
+    InjuryModel.distinct("Acuity", { Acuity: { $nin: ["", null] } }),
+  ]);
+
+  ApiResponse.sendSuccess(res, 200, "Age groups and acuities found", {
+    ageGroups,
+    acuities,
+  });
+};

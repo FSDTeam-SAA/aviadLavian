@@ -48,6 +48,10 @@ const flashcardProgressSchema = new Schema<IFlashcardProgressDocument>(
     nextReviewAt: {
       type: Date,
     },
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
