@@ -27,6 +27,83 @@ const parseInterval = (intervalStr: string): number => {
   return 0;
 };
 
+/**
+ * Convert custom interval string (e.g. "5m", "3d", "2h") to days
+ */
+
+
+/**
+ * Format time difference for early review message
+ */
+const formatRemainingTime = (diffMs: number): string => {
+  const totalSeconds = Math.ceil(diffMs / 1000);
+
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+  const seconds = totalSeconds % 60;
+
+  return [
+    days ? `${days} day(s)` : "",
+    hours ? `${hours} hour(s)` : "",
+    minutes ? `${minutes} minute(s)` : "",
+    seconds ? `${seconds} second(s)` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Format a date nicely for response message
+ */
+const formatNextReviewTime = (date: Date): string => {
+  return date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
+/**
+ * Get base interval in days
+ * correct = 2 day
+ * wrong = 2 minute
+ * unknown = 10 minute
+ */
+const getBaseIntervalByResult = (result: ReviewResult): number => {
+  switch (result) {
+    case "correct":
+      return 2; // 2 days
+    case "wrong":
+      return 2 / (24 * 60); // 2 minutes in days
+    case "unknown":
+      return 10 / (24 * 60); // 10 minutes in days
+    default:
+      return 0;
+  }
+};
+
+const formatInterval = (interval: number): string => {
+  const totalMinutes = interval * 24 * 60;
+
+  if (totalMinutes >= 1440) {
+    const days = totalMinutes / 1440;
+    return `${days} day(s)`;
+  }
+
+  if (totalMinutes >= 60) {
+    const hours = totalMinutes / 60;
+    return `${hours} hour(s)`;
+  }
+
+  return `${Math.round(totalMinutes)} minute(s)`;
+};
+
+
 // Review a flashcard and update spaced repetition progress
 const reviewFlashcard = async (
   userId: string,
@@ -36,32 +113,21 @@ const reviewFlashcard = async (
 ) => {
   const quality = QUALITY_MAP[result];
 
-
   // Check flashcard exists
   const flashcard = await FlashcardModel.findById(flashcardId);
-  if (!flashcard) throw new CustomError(404, "Flashcard not found");
+  if (!flashcard) {
+    throw new CustomError(404, "Flashcard not found");
+  }
 
   // Fetch user progress
   let progress = await FlashcardProgressModel.findOne({ userId, flashcardId });
   let isNew = false;
-
   const now = new Date();
 
   // Prevent early review
   if (progress?.nextReviewAt && now < progress.nextReviewAt) {
     const diffMs = progress.nextReviewAt.getTime() - now.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const diffMinutes = Math.ceil((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    const diffSeconds = Math.ceil((diffMs % (1000 * 60)) / 1000);
-
-    const waitMessage =
-      (diffDays ? `${diffDays} day(s) ` : "") +
-      (diffHours ? `${diffHours} hour(s) ` : "") +
-      (diffMinutes ? `${diffMinutes} minute(s)` : "") +
-      (diffSeconds ? `${diffSeconds} second(s)` : "");
-
-
+    const waitMessage = formatRemainingTime(diffMs);
 
     throw new CustomError(
       400,
@@ -71,38 +137,50 @@ const reviewFlashcard = async (
 
   // Create progress if first time
   if (!progress) {
-    progress = new FlashcardProgressModel({ userId, flashcardId });
+    progress = new FlashcardProgressModel({
+      userId,
+      flashcardId,
+      reviewCount: 0,
+    });
     isNew = true;
   }
 
-  // Set interval
-  let interval: number = 0;
-
-  if (customInterval) {
-    interval = parseInterval(customInterval);
-  }
-
-
-  //!If interval is not provided, use default based on quality 
   /**
- * @description Determine the default review interval when no interval is provided.
- */
-  if (!interval) {
-    if (quality === 5) interval = 5;
-    else if (quality === 3) interval = 3;
-    else interval = 5 / (24 * 60);
+   * reviewCount meaning:
+   * 1st allowed review  => multiplier 1
+   * 2nd allowed review  => multiplier 2
+   * 3rd allowed review  => multiplier 4
+   * 4th allowed review  => multiplier 8
+   */
+  const nextReviewCount = (progress.reviewCount || 0) + 1;
+  const multiplier = Math.pow(2, nextReviewCount - 1);
+
+  let interval = 0;
+
+  // Optional custom interval support
+  if (customInterval) {
+    const parsedCustomInterval = parseInterval(customInterval);
+    if (parsedCustomInterval > 0) {
+      interval = parsedCustomInterval;
+    }
   }
 
-  // Update repetitions
-  let repetitions = progress.repetitions;
+  // Use system interval if custom interval not provided
+  if (!interval) {
+    const baseInterval = getBaseIntervalByResult(result);
+    interval = baseInterval * multiplier;
+  }
+
+  // Keep old repetition logic if you still want it
+  let repetitions = progress.repetitions || 0;
   if (quality === 5) repetitions += 1;
   else if (quality === 1) repetitions = 0;
 
   const easeFactor = progress.easeFactor || 2.5;
-
   const nextReviewAt = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
 
   // Save progress
+  progress.reviewCount = nextReviewCount;
   progress.repetitions = repetitions;
   progress.interval = interval;
   progress.easeFactor = easeFactor;
@@ -113,13 +191,21 @@ const reviewFlashcard = async (
 
   await progress.save();
 
+  const reviewAfter = formatInterval(interval);
+
   return {
     progress,
-    message: isNew ? "Flashcard progress created" : "Flashcard progress updated",
-    canReview: true,
-    nextReviewAt,
+    message: `${isNew ? "Flashcard progress created" : "Flashcard progress updated"
+      }. You can review this flashcard again after ${reviewAfter}. Next review at ${formatNextReviewTime(nextReviewAt)}.`,
+    details: {
+      canReview: true,
+      nextReviewAt,
+      reviewCount: nextReviewCount,
+      appliedMultiplier: multiplier,
+    },
   };
 };
+
 
 
 // Get all flashcard progress for a user

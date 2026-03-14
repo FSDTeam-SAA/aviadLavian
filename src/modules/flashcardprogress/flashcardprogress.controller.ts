@@ -8,24 +8,25 @@ import CustomError from "../../helpers/CustomError";
 export const reviewFlashcard = asyncHandler(
   async (req: Request, res: Response) => {
     const userId: string = req.user?._id as string;
-    const data: ICreateFlashcardProgress = req.body; 
+    const data: ICreateFlashcardProgress = req.body;
 
     if (req.user?.role === "admin") throw new CustomError(403, "Admins are not allowed to take attempt flashcards");
 
 
-    const { progress } = await flashcardprogressService.reviewFlashcard(
+    const { progress, message, details } = await flashcardprogressService.reviewFlashcard(
       userId,
       data.flashcardId,
       data.result,
       data.customInterval
     );
-    
+
 
     ApiResponse.sendSuccess(
       res,
       200,
-      "Flashcard progress updated successfully",
-      progress
+      message,
+      progress,
+      details
     );
   }
 );

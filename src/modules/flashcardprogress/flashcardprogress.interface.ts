@@ -13,6 +13,7 @@ export interface IFlashcardProgress {
   lastQuality?: number; // 1 | 3 | 5;
   lastReviewedAt?: Date;
   nextReviewAt?: Date;
+  reviewCount?: number;
 }
 
 // extends Mongoose document type
