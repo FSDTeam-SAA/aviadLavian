@@ -5,7 +5,7 @@ const optionSchema = new Schema<IOption>(
   {
     text: { type: String, required: true },
     isCorrect: { type: Boolean, required: true },
-    selectedCount: { type: Number, default: 0 }, // 👈
+    selectedCount: { type: Number, default: 0 },
   },
   { _id: true },
 );
@@ -27,13 +27,18 @@ const questionSchema = new Schema<IQuestion>(
     questionText: { type: String, required: true },
     options: { type: [optionSchema], required: true },
     explanation: { type: String, required: true },
-
+    keyPoints: { type: [String], required: true, default: [] },
     marks: { type: Number, default: 1 },
     totalAttempts: { type: Number, default: 0 },
     correctAttempts: { type: Number, default: 0 },
     isHidden: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     createdBy: { type: Schema.Types.ObjectId, ref: "User" },
+    difficulty: {
+      type: String,
+      enum: ["easy", "medium", "hard"],
+      default: "easy",
+    },
   },
   { timestamps: true },
 );
