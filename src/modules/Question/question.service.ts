@@ -8,6 +8,8 @@ import { InjuryModel } from "../injury/injury.model";
 
 const createQuestion = async (payload: Partial<IQuestion>) => {
   try {
+    const article = await ArticleModel.findById(payload.articleId);
+    if (!article) throw new CustomError(404, "Parent article not found");
     return await QuestionModel.create(payload);
   } catch (error: any) {
     if (error.code === 11000) {
@@ -72,10 +74,7 @@ const getAllQuestions = async (query: any) => {
   // Step 4: Question search (same as old logic you gave me)
   if (query.search && typeof query.search === "string" && query.search.trim()) {
     const qSearch = new RegExp(query.search, "i");
-    filter.$or = [
-      { questionText: qSearch },
-      { explanation: qSearch },
-    ];
+    filter.$or = [{ questionText: qSearch }, { explanation: qSearch }];
   }
 
   // Step 5: Count & Fetch

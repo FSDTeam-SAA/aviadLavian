@@ -12,12 +12,12 @@ export interface IQuestion {
   topicIds: Types.ObjectId[];
   questionText: string;
   options: IOption[];
-
+  difficulty: "easy" | "medium" | "hard";
   totalAttempts?: number;
   correctAttempts?: number;
 
   explanation: string;
-
+  keyPoints: string[];
   marks: number;
   isHidden: boolean;
   isDeleted?: boolean;
@@ -29,6 +29,7 @@ export interface IUpdateQuestion {
   topicIds?: Types.ObjectId[];
   questionText?: string;
   explanation?: string;
+  keyPoints?: string[];
   marks?: number;
   isHidden?: boolean;
   isDeleted?: boolean;

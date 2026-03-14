@@ -22,10 +22,10 @@ const config = {
     jwtExpire: process.env.JWT_EXPIRE ?? "1h",
 
     accessTokenSecret: process.env.ACCESS_TOKEN_SECRET as string,
-    accessTokenExpires: process.env.ACCESS_TOKEN_EXPIRES ?? "15m",
+    accessTokenExpires: process.env.ACCESS_TOKEN_EXPIRES ?? "10d",
 
     refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET as string,
-    refreshTokenExpires: process.env.REFRESH_TOKEN_EXPIRES ?? "7d",
+    refreshTokenExpires: process.env.REFRESH_TOKEN_EXPIRES ?? "15d",
   },
 
   /* ================= Cloudinary ================= */

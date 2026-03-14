@@ -26,7 +26,7 @@ export const userService = {
     }
 
     const adminEmails = config.adminEmails;
-    console.log(adminEmails);
+    // console.log(adminEmails);
     const role = adminEmails.includes(payload.email!) ? "admin" : "user";
     const getOtp = generateOTP();
     const otp = Number(getOtp);
