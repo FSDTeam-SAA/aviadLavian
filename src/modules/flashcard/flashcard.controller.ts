@@ -40,9 +40,7 @@ export const getAllFlashcards = asyncHandler(async (req: Request, res: Response)
     isAdmin
   );
 
-  const message = data.length > 0 ? "Flashcards found" : "No flashcards found";
-  console.log(meta);
-  
+  const message = data.length > 0 ? "Flashcards found" : "No flashcards found";  
 
   ApiResponse.sendSuccess(res, 200, message, data, meta[0]);
 });
