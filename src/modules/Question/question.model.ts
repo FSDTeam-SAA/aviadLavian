@@ -1,5 +1,7 @@
 import { Schema, model, CallbackError } from "mongoose";
 import { IOption, IQuestion } from "./question.interface";
+import { ArticleModel } from "../Article/article.model";
+import { InjuryModel } from "../injury/injury.model";
 
 const optionSchema = new Schema<IOption>(
   {
@@ -17,13 +19,13 @@ const questionSchema = new Schema<IQuestion>(
       ref: "Article",
       required: true,
     },
-    topicIds: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: "Injury",
-        required: true,
-      },
-    ],
+
+    topicId: {
+      type: String,
+      // required: true,
+      trim: true,
+    },
+
     questionText: { type: String, required: true },
     options: { type: [optionSchema], required: true },
     explanation: { type: String, required: true },
@@ -48,26 +50,40 @@ questionSchema.index({ difficulty: 1 });
 questionSchema.index({ isDeleted: 1 });
 questionSchema.index({ isHidden: 1 });
 
-// Middleware to prevent duplicate question text under same subtopic
 questionSchema.pre("save", async function () {
+  const article = await ArticleModel.findById(this.articleId);
+
+  if (!article || !article.topicIds.length) {
+    throw new Error("Article has no topicIds");
+  }
+
+  const injury = await InjuryModel.findById(article.topicIds[0]);
+
+  if (!injury) {
+    throw new Error("Injury not found");
+  }
+
+  this.topicId = injury.Primary_Body_Region;
+
   if (this.options.length < 2) {
     throw new Error("A question must have at least 2 options");
   }
-  // 🔥 Duplicate option text check
+
   if (this.isModified("options")) {
     const optionTexts = this.options.map((opt) =>
       opt.text.toLowerCase().trim(),
     );
+
     const uniqueOptions = new Set(optionTexts);
 
     if (optionTexts.length !== uniqueOptions.size) {
       throw new Error("Duplicate options are not allowed in a question");
     }
 
-    // ✅ Ensure only one correct answer
     const correctOptionsCount = this.options.filter(
       (opt) => opt.isCorrect === true,
     ).length;
+
     const falseOptionsCount = this.options.filter(
       (opt) => opt.isCorrect === false,
     ).length;
@@ -84,7 +100,6 @@ questionSchema.pre("save", async function () {
   }
 });
 
-// Middleware for findOneAndUpdate
 questionSchema.pre("findOneAndUpdate", async function () {
   const update = this.getUpdate() as any;
   const filter = this.getFilter() as any;
@@ -92,9 +107,29 @@ questionSchema.pre("findOneAndUpdate", async function () {
   const currentDoc = await QuestionModel.findOne(filter);
   if (!currentDoc) return;
 
+  const articleId = update.articleId || currentDoc.articleId;
+
+  const article = await ArticleModel.findById(articleId);
+
+  if (!article || !article.topicIds.length) {
+    throw new Error("Article has no topicIds");
+  }
+
+  const injury = await InjuryModel.findById(article.topicIds[0]);
+
+  if (!injury) {
+    throw new Error("Injury not found");
+  }
+
+  if (update.$set) {
+    update.$set.topicId = injury.Primary_Body_Region;
+  } else {
+    update.topicId = injury.Primary_Body_Region;
+  }
+
   if (update.questionText) {
     const duplicate = await QuestionModel.findOne({
-      articleId: update.articleId || currentDoc.articleId,
+      articleId: articleId,
       questionText: update.questionText,
       _id: { $ne: currentDoc._id },
       isDeleted: false,
@@ -147,6 +182,7 @@ questionSchema.pre("findOneAndUpdate", async function () {
           opt.isCorrect === true &&
           opt._id.toString() !== optionIdFromFilter?.toString(),
       );
+
       if (alreadyCorrect) {
         throw new Error(
           "Only one option can be marked as correct in a question",
@@ -160,6 +196,7 @@ questionSchema.pre("findOneAndUpdate", async function () {
           opt.isCorrect === true &&
           opt._id.toString() !== optionIdFromFilter?.toString(),
       );
+
       if (!otherCorrectExists) {
         throw new Error(
           "At least one option must be marked as correct in a question",

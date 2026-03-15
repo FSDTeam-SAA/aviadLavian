@@ -9,7 +9,7 @@ export interface IOption {
 
 export interface IQuestion {
   articleId: Types.ObjectId;
-  topicIds: Types.ObjectId[];
+  topicId: string;
   questionText: string;
   options: IOption[];
   difficulty: "easy" | "medium" | "hard";
@@ -30,6 +30,7 @@ export interface IUpdateQuestion {
   questionText?: string;
   explanation?: string;
   keyPoints?: string[];
+  difficulty?: "easy" | "medium" | "hard";
   marks?: number;
   isHidden?: boolean;
   isDeleted?: boolean;
