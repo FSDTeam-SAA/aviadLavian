@@ -26,7 +26,7 @@ export interface IQuestion {
 
 export interface IUpdateQuestion {
   articleId?: Types.ObjectId;
-  topicIds?: Types.ObjectId[];
+  topicId?: string;
   questionText?: string;
   explanation?: string;
   keyPoints?: string[];
