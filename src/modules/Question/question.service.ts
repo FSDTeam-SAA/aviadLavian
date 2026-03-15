@@ -113,6 +113,8 @@ const updateQuestion = async (
     explanation: payload.explanation,
     marks: payload.marks,
     isHidden: payload.isHidden,
+    keyPoints: payload.keyPoints,
+    difficulty: payload.difficulty,
     isDeleted: payload.isDeleted,
   };
   const question = await QuestionModel.findByIdAndUpdate(id, allowedFields, {
