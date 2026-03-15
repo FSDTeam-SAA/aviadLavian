@@ -82,7 +82,7 @@ const getAllQuestions = async (query: any) => {
 
   const questions = await QuestionModel.find(filter)
     .populate("articleId", "name")
-    .populate("topicIds")
+    .populate("topicId")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -108,7 +108,7 @@ const updateQuestion = async (
 ) => {
   const allowedFields = {
     articleId: payload.articleId,
-    topicIds: payload.topicIds,
+    topicId: payload.topicId,
     questionText: payload.questionText,
     explanation: payload.explanation,
     marks: payload.marks,
