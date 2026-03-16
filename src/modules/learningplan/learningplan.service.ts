@@ -25,10 +25,6 @@ const populationOptions = [
     },
     {
         path: "quizzes.quizId",
-        populate: {
-            path: "topicIds",
-            model: "Injury",
-        },
     },
 ];
 
