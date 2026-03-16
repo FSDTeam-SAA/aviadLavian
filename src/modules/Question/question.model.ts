@@ -1,7 +1,5 @@
 import { Schema, model, CallbackError } from "mongoose";
 import { IOption, IQuestion } from "./question.interface";
-import { ArticleModel } from "../Article/article.model";
-import { InjuryModel } from "../injury/injury.model";
 
 const optionSchema = new Schema<IOption>(
   {
@@ -56,21 +54,6 @@ questionSchema.index({ isDeleted: 1 });
 questionSchema.index({ isHidden: 1 });
 
 questionSchema.pre("save", async function () {
-  const article = await ArticleModel.findById(this.articleId);
-
-  if (!article || !article.topicIds.length) {
-    throw new Error("Article has no topicIds");
-  }
-
-  const injury = await InjuryModel.findById(article.topicIds[0]);
-
-  if (!injury) {
-    throw new Error("Injury not found");
-  }
-
-  this.topicId = injury.Primary_Body_Region;
-  this.group = injury.Group;
-
   if (this.options.length < 2) {
     throw new Error("A question must have at least 2 options");
   }
@@ -114,26 +97,6 @@ questionSchema.pre("findOneAndUpdate", async function () {
   if (!currentDoc) return;
 
   const articleId = update.articleId || currentDoc.articleId;
-
-  const article = await ArticleModel.findById(articleId);
-
-  if (!article || !article.topicIds.length) {
-    throw new Error("Article has no topicIds");
-  }
-
-  const injury = await InjuryModel.findById(article.topicIds[0]);
-
-  if (!injury) {
-    throw new Error("Injury not found");
-  }
-
-  if (update.$set) {
-    update.$set.topicId = injury.Primary_Body_Region;
-    update.$set.group = injury.Group;
-  } else {
-    update.topicId = injury.Primary_Body_Region;
-    update.group = injury.Group;
-  }
 
   if (update.questionText) {
     const duplicate = await QuestionModel.findOne({
