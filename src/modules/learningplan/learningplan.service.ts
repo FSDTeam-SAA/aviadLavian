@@ -50,7 +50,7 @@ const getAllLearningPlans = async (
     userId: string,
     params: IGetAllLearningPlansParams
 ) => {
-    const { page, limit, sort = "decending", name } = params;
+    const { page, limit, sort = "decending", name, search } = params;
     const {
         limit: pageLimit,
         skip,
@@ -61,7 +61,10 @@ const getAllLearningPlans = async (
         userId: new Types.ObjectId(userId),
         isActive: true,
     };
-    if (name) {
+    if (search) {
+        const regex = { $regex: search, $options: "i" };
+        query.$or = [{ name: regex }, { description: regex }];
+    } else if (name) {
         query.name = { $regex: name, $options: "i" };
     }
 
@@ -338,9 +341,7 @@ const addQuizToPlan = async (
         throw new CustomError(404, "Parent article not found for this question");
     }
 
-    // Update question's topicIds from article's topicIds
-    question.topicIds = article.topicIds as Types.ObjectId[];
-    await question.save();
+    await question.save(); // Triggers pre-save hook to sync topicId and group
 
     // Add to learning plan quizzes
     const alreadyExists = plan.quizzes.some(

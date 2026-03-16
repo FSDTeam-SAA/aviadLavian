@@ -26,6 +26,11 @@ const questionSchema = new Schema<IQuestion>(
       trim: true,
     },
 
+    group: {
+      type: String,
+      trim: true,
+    },
+
     questionText: { type: String, required: true },
     options: { type: [optionSchema], required: true },
     explanation: { type: String, required: true },
@@ -64,6 +69,7 @@ questionSchema.pre("save", async function () {
   }
 
   this.topicId = injury.Primary_Body_Region;
+  this.group = injury.Group;
 
   if (this.options.length < 2) {
     throw new Error("A question must have at least 2 options");
@@ -123,8 +129,10 @@ questionSchema.pre("findOneAndUpdate", async function () {
 
   if (update.$set) {
     update.$set.topicId = injury.Primary_Body_Region;
+    update.$set.group = injury.Group;
   } else {
     update.topicId = injury.Primary_Body_Region;
+    update.group = injury.Group;
   }
 
   if (update.questionText) {

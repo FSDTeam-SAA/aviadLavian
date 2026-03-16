@@ -89,16 +89,19 @@ export const uploadCSV = asyncHandler(async (req: Request, res: Response) => {
 // Get filter options
 export const getFilterOptions = asyncHandler(
   async (req: Request, res: Response) => {
-    const [bodyRegions, acuityValues, importanceLevels] = await Promise.all([
-      injuryService.getBodyRegions(),
-      injuryService.getAcuityValues(),
-      injuryService.getImportanceLevels(),
-    ]);
+    const [bodyRegions, acuityValues, importanceLevels, groups] =
+      await Promise.all([
+        injuryService.getBodyRegions(),
+        injuryService.getAcuityValues(),
+        injuryService.getImportanceLevels(),
+        injuryService.getGroups(),
+      ]);
 
     ApiResponse.sendSuccess(res, 200, "Filter options retrieved", {
       bodyRegions,
       acuityValues,
       importanceLevels,
+      groups,
     });
   },
 );

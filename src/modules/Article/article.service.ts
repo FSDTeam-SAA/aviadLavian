@@ -41,7 +41,7 @@ const getSingleArticle = async (id: string) => {
 };
 
 const getAllArticles = async (params: IGetAllArticlesParams) => {
-    const { page, limit, sort = "decending", topicId, name } = params;
+    const { page, limit, sort = "decending", topicId, name, search } = params;
     const { limit: pageLimit, skip, page: currentPage } = paginationHelper(page, limit);
 
     const query: any = {};
@@ -54,7 +54,10 @@ const getAllArticles = async (params: IGetAllArticlesParams) => {
             query.topicIds = topicId;
         }
     }
-    if (name) {
+    if (search) {
+        const regex = { $regex: search, $options: "i" };
+        query.$or = [{ name: regex }, { description: regex }];
+    } else if (name) {
         query.name = { $regex: name, $options: "i" };
     }
 

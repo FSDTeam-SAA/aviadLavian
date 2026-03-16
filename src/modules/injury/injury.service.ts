@@ -72,6 +72,7 @@ const buildSearchQuery = (search: string) => {
     $or: [
       { Name: regex },
       { Id: regex },
+      { Group: regex },
       { Primary_Body_Region: regex },
       { Tags_Keywords: { $in: [regex] } },
       { Synonyms_Abbreviations: { $in: [regex] } },
@@ -82,11 +83,16 @@ const buildSearchQuery = (search: string) => {
 
 // Build filter query
 const buildFilterQuery = (
+  group?: string,
   primaryRegion?: string,
   acuity?: string,
   importanceLevel?: string,
 ) => {
   const query: any = {};
+
+  if (group) {
+    query.Group = new RegExp(group, "i");
+  }
 
   if (primaryRegion) {
     query.Primary_Body_Region = new RegExp(primaryRegion, "i");
@@ -125,6 +131,7 @@ const getAllInjuries = async ({
   limit,
   sort = "ascending",
   search,
+  group,
   primaryRegion,
   acuity,
   importanceLevel,
@@ -135,7 +142,7 @@ const getAllInjuries = async ({
     skip,
   } = paginationHelper(page, limit);
 
-  let query = buildFilterQuery(primaryRegion, acuity, importanceLevel);
+  let query = buildFilterQuery(group, primaryRegion, acuity, importanceLevel);
 
   if (search) {
     query = { ...query, ...buildSearchQuery(search) };
@@ -200,6 +207,14 @@ const validateRequiredFields = (row: CSVRow, rowNumber: number) => {
     };
   }
 
+  if (!row.Group || row.Group.trim() === "") {
+    return {
+      row: rowNumber,
+      id: row.Id,
+      message: "Group is required",
+    };
+  }
+
   return null;
 };
 
@@ -217,6 +232,7 @@ const transformRowToInjury = (row: CSVRow): ICreateInjury => {
   return {
     Id: row.Id.trim(),
     Name: row.Name.trim(),
+    Group: row.Group.trim(),
     Primary_Body_Region: row.Primary_Body_Region.trim(),
     Secondary_Body_Region: row.Secondary_Body_Region?.trim() || "",
     Acuity: row.Acuity?.trim() || "",
@@ -437,6 +453,12 @@ const getImportanceLevels = async () => {
   return values.filter(Boolean).sort((a, b) => a.localeCompare(b));
 };
 
+// Get all unique groups for filtering
+const getGroups = async () => {
+  const groups = await InjuryModel.distinct("Group");
+  return groups.filter(Boolean).sort((a, b) => a.localeCompare(b));
+};
+
 export const injuryService = {
   createInjury,
   getSingleInjury,
@@ -450,4 +472,5 @@ export const injuryService = {
   getAcuityValues,
   getImportanceLevels,
   getInjuriesByRegion,
+  getGroups,
 };

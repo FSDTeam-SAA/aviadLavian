@@ -1,6 +1,7 @@
 export interface IInjury {
   Id: string;
   Name: string;
+  Group: string;
   Primary_Body_Region: string;
   Secondary_Body_Region: string;
   Acuity: string;
@@ -21,6 +22,7 @@ export interface IInjury {
 export interface ICreateInjury {
   Id: string;
   Name: string;
+  Group: string;
   Primary_Body_Region: string;
   Secondary_Body_Region?: string;
   Acuity?: string;
@@ -38,6 +40,7 @@ export interface ICreateInjury {
 
 export interface IUpdateInjury {
   Name?: string;
+  Group?: string;
   Primary_Body_Region?: string;
   Secondary_Body_Region?: string;
   Acuity?: string;
@@ -58,6 +61,7 @@ export interface GetAllInjuriesParams {
   limit?: string;
   sort?: string;
   search?: string;
+  group?: string;
   primaryRegion?: string;
   acuity?: string;
   importanceLevel?: string;
@@ -80,6 +84,7 @@ export interface CSVUploadResult {
 export interface CSVRow {
   Id: string;
   Name: string;
+  Group: string;
   Primary_Body_Region: string;
   Secondary_Body_Region: string;
   Acuity: string;

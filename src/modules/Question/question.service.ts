@@ -27,6 +27,7 @@ const getAllQuestions = async (query: any) => {
 
   // Step 1: Basic Question filters
   if (query.articleId) filter.articleId = query.articleId;
+  if (query.group) filter.group = { $regex: `^${query.group}$`, $options: "i" };
   if (query.difficulty) filter.difficulty = query.difficulty;
   if (query.isHidden !== undefined) filter.isHidden = query.isHidden === "true";
 
@@ -108,6 +109,7 @@ const updateQuestion = async (
 ) => {
   const allowedFields = {
     articleId: payload.articleId,
+    group: payload.group,
     topicId: payload.topicId,
     questionText: payload.questionText,
     explanation: payload.explanation,

@@ -20,4 +20,5 @@ export interface IGetAllArticlesParams {
     sort?: "accending" | "decending";
     topicId?: string;
     name?: string;
+    search?: string;
 }

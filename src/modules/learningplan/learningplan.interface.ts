@@ -33,4 +33,5 @@ export interface IGetAllLearningPlansParams {
     limit?: string;
     sort?: "accending" | "decending";
     name?: string;
+    search?: string;
 }

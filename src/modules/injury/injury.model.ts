@@ -18,6 +18,13 @@ const injurySchema = new Schema<IInjury>(
       trim: true,
     },
 
+    // Higher-level grouping (e.g., Cardiology)
+    Group: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     // Hierarchy Parent
     Primary_Body_Region: {
       type: String,
@@ -101,6 +108,7 @@ const injurySchema = new Schema<IInjury>(
 );
 
 // Index for faster searches
+injurySchema.index({ Group: 1 });
 injurySchema.index({ Primary_Body_Region: 1 });
 injurySchema.index({ Name: "text", Tags_Keywords: "text" });
 

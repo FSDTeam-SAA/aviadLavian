@@ -30,6 +30,12 @@ export const createInjurySchema = z
       .max(200, "Name cannot exceed 200 characters")
       .transform((val) => val.trim()),
 
+    Group: z
+      .string()
+      .min(1, "Group is required")
+      .max(100, "Group cannot exceed 100 characters")
+      .transform((val) => val.trim()),
+
     Primary_Body_Region: z
       .string()
       .min(1, "Primary Body Region is required")
@@ -108,6 +114,13 @@ export const updateInjurySchema = z
       .string()
       .min(1, "Name cannot be empty")
       .max(200, "Name cannot exceed 200 characters")
+      .transform((val) => val.trim())
+      .optional(),
+
+    Group: z
+      .string()
+      .min(1, "Group cannot be empty")
+      .max(100, "Group cannot exceed 100 characters")
       .transform((val) => val.trim())
       .optional(),
 

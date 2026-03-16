@@ -9,6 +9,7 @@ export interface IOption {
 
 export interface IQuestion {
   articleId: Types.ObjectId;
+  group: string;
   topicId: string;
   questionText: string;
   options: IOption[];
@@ -26,6 +27,7 @@ export interface IQuestion {
 
 export interface IUpdateQuestion {
   articleId?: Types.ObjectId;
+  group?: string;
   topicId?: string;
   questionText?: string;
   explanation?: string;
