@@ -32,7 +32,7 @@
     "cloudinary": "^2.8.0",
     "corn": "^0.0.1",
     "cron": "^4.4.0",
-    "csv-parse": "^6.1.0",
+    "csv-parse": "^7.0.2",
     "disposable-email-domains": "^1.0.62",
     "dotenv": "^8.2.0",
     "ioredis": "^5.9.2",
